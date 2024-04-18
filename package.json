@@ -38,14 +38,14 @@
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
 		"lint": "tsc -p tsconfig.json --noEmit && eslint src",
-		"build": "node scripts/build.js",
+		"build": "npx build --package=@zenfs/core --globalName ZenFS_Emscripten -entry src/index.ts",
 		"build:docs": "typedoc --out docs --name 'ZenFS Emscripten' src/index.ts",
 		"prepublishOnly": "npm run build"
 	},
 	"devDependencies": {
 		"@types/emscripten": "^1.39.10",
-		"@typescript-eslint/eslint-plugin": "^5.55.0",
-		"@typescript-eslint/parser": "^5.55.0",
+		"@typescript-eslint/eslint-plugin": "^7.7.0",
+		"@typescript-eslint/parser": "^7.7.0",
 		"esbuild": "^0.17.18",
 		"eslint": "^8.36.0",
 		"prettier": "^3.2.5",
@@ -53,6 +53,6 @@
 		"typescript": "5.2.2"
 	},
 	"dependencies": {
-		"@zenfs/core": "^0.5.2"
+		"@zenfs/core": "^0.7.0"
 	}
 }
