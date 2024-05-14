@@ -12,7 +12,7 @@
 import type { Errno } from '@zenfs/core';
 import 'emscripten'; // Note: this is for types only.
 
-export interface Mount extends FS.Mount { 
+export interface Mount extends FS.Mount {
 	opts: { root?: string };
 }
 
