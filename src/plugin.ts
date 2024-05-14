@@ -2,7 +2,7 @@ import fs, { parseFlag, type Errno, type Stats } from '@zenfs/core';
 import * as emscripten from './emscripten.js';
 import { assignWithDefaults, pick } from 'utilium';
 
-class StreamOps implements emscripten.StreamOps {
+class StreamOps implements FS.StreamOps {
 	get nodefs(): typeof fs {
 		return this._fs.nodefs;
 	}
@@ -19,38 +19,36 @@ class StreamOps implements emscripten.StreamOps {
 		return this._fs.ERRNO_CODES;
 	}
 
-	constructor(protected _fs: ZenFSEmscriptenPlugin) {}
+	constructor(protected _fs: ZenFSEmscriptenNodeFS) {}
 
-	public open(stream: emscripten.Stream): void {
+	public open(stream: FS.FSStream): void {
 		const path = this._fs.realPath(stream.object);
-		const FS = this.FS;
 		try {
-			if (FS.isFile(stream.object.mode)) {
+			if (this.FS.isFile(stream.object.mode)) {
 				stream.nfd = this.nodefs.openSync(path, parseFlag(stream.flags));
 			}
 		} catch (e) {
 			if (!e.code) {
 				throw e;
 			}
-			throw new FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
+			throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
 		}
 	}
 
-	public close(stream: emscripten.Stream): void {
-		const FS = this.FS;
+	public close(stream: FS.FSStream): void {
 		try {
-			if (FS.isFile(stream.object.mode) && stream.nfd) {
+			if (this.FS.isFile(stream.object.mode) && stream.nfd) {
 				this.nodefs.closeSync(stream.nfd);
 			}
 		} catch (e) {
 			if (!e.code) {
 				throw e;
 			}
-			throw new FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
+			throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
 		}
 	}
 
-	public read(stream: emscripten.Stream, buffer: Uint8Array, offset: number, length: number, position: number): number {
+	public read(stream: FS.FSStream, buffer: Uint8Array, offset: number, length: number, position: number): number {
 		// Avoid copying overhead by reading directly into buffer.
 		try {
 			return this.nodefs.readSync(stream.nfd, Buffer.from(buffer), offset, length, position);
@@ -59,7 +57,7 @@ class StreamOps implements emscripten.StreamOps {
 		}
 	}
 
-	public write(stream: emscripten.Stream, buffer: Uint8Array, offset: number, length: number, position: number): number {
+	public write(stream: FS.FSStream, buffer: Uint8Array, offset: number, length: number, position: number): number {
 		// Avoid copying overhead.
 		try {
 			return this.nodefs.writeSync(stream.nfd, buffer, offset, length, position);
@@ -68,7 +66,7 @@ class StreamOps implements emscripten.StreamOps {
 		}
 	}
 
-	public llseek(stream: emscripten.Stream, offset: number, whence: number): number {
+	public llseek(stream: FS.FSStream, offset: number, whence: number): number {
 		let position = offset;
 		if (whence === 1) {
 			// SEEK_CUR.
@@ -94,7 +92,7 @@ class StreamOps implements emscripten.StreamOps {
 	}
 }
 
-class EntryOps implements emscripten.NodeOps {
+class EntryOps implements FS.NodeOps {
 	get nodefs(): typeof fs {
 		return this._fs.nodefs;
 	}
@@ -111,7 +109,7 @@ class EntryOps implements emscripten.NodeOps {
 		return this._fs.ERRNO_CODES;
 	}
 
-	constructor(protected _fs: ZenFSEmscriptenPlugin) {}
+	constructor(protected _fs: ZenFSEmscriptenNodeFS) {}
 
 	public getattr(node: FS.FSNode): Stats {
 		const path = this._fs.realPath(node);
@@ -127,7 +125,7 @@ class EntryOps implements emscripten.NodeOps {
 		return stat;
 	}
 
-	public setattr(node: FS.FSNode, attr: emscripten.Stats): void {
+	public setattr(node: FS.FSNode, attr: FS.Stats): void {
 		const path = this._fs.realPath(node);
 		try {
 			if (attr.mode !== undefined) {
@@ -268,9 +266,9 @@ class EntryOps implements emscripten.NodeOps {
 	}
 }
 
-export default class ZenFSEmscriptenPlugin implements emscripten.Plugin {
-	public node_ops: emscripten.NodeOps = new EntryOps(this);
-	public stream_ops: emscripten.StreamOps = new StreamOps(this);
+export default class ZenFSEmscriptenNodeFS implements emscripten.FS {
+	public node_ops: FS.NodeOps = new EntryOps(this);
+	public stream_ops: FS.StreamOps = new StreamOps(this);
 
 	public readonly FS: typeof FS;
 	public readonly PATH: emscripten.PATH;
@@ -283,11 +281,11 @@ export default class ZenFSEmscriptenPlugin implements emscripten.Plugin {
 		assignWithDefaults(this, pick(emscripten, 'FS', 'PATH', 'ERRNO_CODES'));
 	}
 
-	public mount(m: { opts: { root: string } }): FS.FSNode {
-		return this.createNode(null, '/', this.getMode(m.opts.root), 0);
+	public mount(mount: emscripten.Mount): emscripten.Node {
+		return this.createNode(null, '/', this.getMode(mount.opts.root), 0);
 	}
 
-	public createNode(parent: FS.FSNode | null, name: string, mode: number, rdev?: number): FS.FSNode {
+	public createNode(parent: emscripten.Node | null, name: string, mode: number, rdev?: number): emscripten.Node {
 		if (!this.FS.isDir(mode) && !this.FS.isFile(mode) && !this.FS.isLink(mode)) {
 			throw new this.FS.ErrnoError(this.ERRNO_CODES.EINVAL);
 		}
@@ -310,7 +308,7 @@ export default class ZenFSEmscriptenPlugin implements emscripten.Plugin {
 		return stat.mode;
 	}
 
-	public realPath(node: FS.FSNode): string {
+	public realPath(node: emscripten.Node): string {
 		const parts: string[] = [];
 		while (node.parent !== node) {
 			parts.push(node.name);
@@ -318,6 +316,6 @@ export default class ZenFSEmscriptenPlugin implements emscripten.Plugin {
 		}
 		parts.push(node.mount.opts.root);
 		parts.reverse();
-		return this.PATH.join.apply(null, parts);
+		return this.PATH.join(...parts);
 	}
 }

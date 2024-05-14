@@ -1,12 +1,12 @@
-import { FileSystemMetadata, Sync, FileSystem } from '@zenfs/core/filesystem.js';
-import { Stats, FileType } from '@zenfs/core/stats.js';
-import { File } from '@zenfs/core/file.js';
-import { ErrnoError, Errno, errorMessages } from '@zenfs/core/error.js';
-import { Cred } from '@zenfs/core/cred.js';
-import { Buffer } from 'buffer';
 import type { Backend } from '@zenfs/core';
-import * as emscripten from './emscripten.js';
+import { Cred } from '@zenfs/core/cred.js';
 import { basename, dirname } from '@zenfs/core/emulation/path.js';
+import { Errno, ErrnoError, errorMessages } from '@zenfs/core/error.js';
+import { File } from '@zenfs/core/file.js';
+import { FileSystem, FileSystemMetadata, Sync } from '@zenfs/core/filesystem.js';
+import { FileType, Stats } from '@zenfs/core/stats.js';
+import { Buffer } from 'buffer';
+import './emscripten.js';
 
 /**
  * @hidden
@@ -30,7 +30,7 @@ export class EmscriptenFile extends File {
 		protected _fs: EmscriptenFS,
 		protected _FS: typeof FS,
 		public readonly path: string,
-		protected _stream: emscripten.Stream
+		protected _stream: FS.FSStream
 	) {
 		super();
 	}
