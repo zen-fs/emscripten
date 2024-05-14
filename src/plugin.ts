@@ -1,5 +1,6 @@
-import fs, { parseFlag, type Stats } from '@zenfs/core';
-import type * as emscripten from './emscripten.js';
+import fs, { parseFlag, type Errno, type Stats } from '@zenfs/core';
+import * as emscripten from './emscripten.js';
+import { assignWithDefaults, pick } from 'utilium';
 
 class StreamOps implements emscripten.StreamOps {
 	get nodefs(): typeof fs {
@@ -31,7 +32,7 @@ class StreamOps implements emscripten.StreamOps {
 			if (!e.code) {
 				throw e;
 			}
-			throw new FS.ErrnoError(this.ERRNO_CODES[e.code]);
+			throw new FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
 		}
 	}
 
@@ -45,7 +46,7 @@ class StreamOps implements emscripten.StreamOps {
 			if (!e.code) {
 				throw e;
 			}
-			throw new FS.ErrnoError(this.ERRNO_CODES[e.code]);
+			throw new FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
 		}
 	}
 
@@ -54,7 +55,7 @@ class StreamOps implements emscripten.StreamOps {
 		try {
 			return this.nodefs.readSync(stream.nfd, Buffer.from(buffer), offset, length, position);
 		} catch (e) {
-			throw new this.FS.ErrnoError(this.ERRNO_CODES[e.code]);
+			throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
 		}
 	}
 
@@ -63,7 +64,7 @@ class StreamOps implements emscripten.StreamOps {
 		try {
 			return this.nodefs.writeSync(stream.nfd, buffer, offset, length, position);
 		} catch (e) {
-			throw new this.FS.ErrnoError(this.ERRNO_CODES[e.code]);
+			throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
 		}
 	}
 
@@ -79,7 +80,7 @@ class StreamOps implements emscripten.StreamOps {
 					const stat = this.nodefs.fstatSync(stream.nfd);
 					position += stat.size;
 				} catch (e) {
-					throw new this.FS.ErrnoError(this.ERRNO_CODES[e.code]);
+					throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
 				}
 			}
 		}
@@ -121,7 +122,7 @@ class EntryOps implements emscripten.NodeOps {
 			if (!e.code) {
 				throw e;
 			}
-			throw new this.FS.ErrnoError(this.ERRNO_CODES[e.code]);
+			throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
 		}
 		return stat;
 	}
@@ -145,7 +146,7 @@ class EntryOps implements emscripten.NodeOps {
 			// Ignore not supported errors. Emscripten does utimesSync when it
 			// writes files, but never really requires the value to be set.
 			if (e.code !== 'ENOTSUP') {
-				throw new this.FS.ErrnoError(this.ERRNO_CODES[e.code]);
+				throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
 			}
 		}
 		if (attr.size !== undefined) {
@@ -155,7 +156,7 @@ class EntryOps implements emscripten.NodeOps {
 				if (!e.code) {
 					throw e;
 				}
-				throw new this.FS.ErrnoError(this.ERRNO_CODES[e.code]);
+				throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
 			}
 		}
 	}
@@ -180,7 +181,7 @@ class EntryOps implements emscripten.NodeOps {
 			if (!e.code) {
 				throw e;
 			}
-			throw new this.FS.ErrnoError(this.ERRNO_CODES[e.code]);
+			throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
 		}
 		return node;
 	}
@@ -198,7 +199,7 @@ class EntryOps implements emscripten.NodeOps {
 			if (!e.code) {
 				throw e;
 			}
-			throw new this.FS.ErrnoError(this.ERRNO_CODES[e.code]);
+			throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
 		}
 	}
 
@@ -210,7 +211,7 @@ class EntryOps implements emscripten.NodeOps {
 			if (!e.code) {
 				throw e;
 			}
-			throw new this.FS.ErrnoError(this.ERRNO_CODES[e.code]);
+			throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
 		}
 	}
 
@@ -222,7 +223,7 @@ class EntryOps implements emscripten.NodeOps {
 			if (!e.code) {
 				throw e;
 			}
-			throw new this.FS.ErrnoError(this.ERRNO_CODES[e.code]);
+			throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
 		}
 	}
 
@@ -238,7 +239,7 @@ class EntryOps implements emscripten.NodeOps {
 			if (!e.code) {
 				throw e;
 			}
-			throw new this.FS.ErrnoError(this.ERRNO_CODES[e.code]);
+			throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
 		}
 	}
 
@@ -250,7 +251,7 @@ class EntryOps implements emscripten.NodeOps {
 			if (!e.code) {
 				throw e;
 			}
-			throw new this.FS.ErrnoError(this.ERRNO_CODES[e.code]);
+			throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
 		}
 	}
 
@@ -262,7 +263,7 @@ class EntryOps implements emscripten.NodeOps {
 			if (!e.code) {
 				throw e;
 			}
-			throw new this.FS.ErrnoError(this.ERRNO_CODES[e.code]);
+			throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
 		}
 	}
 }
@@ -271,23 +272,26 @@ export default class ZenFSEmscriptenPlugin implements emscripten.Plugin {
 	public node_ops: emscripten.NodeOps = new EntryOps(this);
 	public stream_ops: emscripten.StreamOps = new StreamOps(this);
 
+	public readonly FS: typeof FS;
+	public readonly PATH: emscripten.PATH;
+	public readonly ERRNO_CODES: typeof Errno;
+
 	constructor(
-		public readonly FS = globalThis.FS,
-		public readonly PATH = globalThis.PATH,
-		public readonly ERRNO_CODES = globalThis.ERRNO_CODES,
+		emscripten: emscripten.Module,
 		public readonly nodefs: typeof fs = fs
-	) {}
+	) {
+		assignWithDefaults(this, pick(emscripten, 'FS', 'PATH', 'ERRNO_CODES'));
+	}
 
 	public mount(m: { opts: { root: string } }): FS.FSNode {
 		return this.createNode(null, '/', this.getMode(m.opts.root), 0);
 	}
 
 	public createNode(parent: FS.FSNode | null, name: string, mode: number, rdev?: number): FS.FSNode {
-		const FS = this.FS;
-		if (!FS.isDir(mode) && !FS.isFile(mode) && !FS.isLink(mode)) {
-			throw new FS.ErrnoError(this.ERRNO_CODES.EINVAL);
+		if (!this.FS.isDir(mode) && !this.FS.isFile(mode) && !this.FS.isLink(mode)) {
+			throw new this.FS.ErrnoError(this.ERRNO_CODES.EINVAL);
 		}
-		const node: emscripten.Node = new FS.FSNode(parent, name, mode, rdev);
+		const node: emscripten.Node = new this.FS.FSNode(parent, name, mode, rdev);
 		node.node_ops = this.node_ops;
 		node.stream_ops = this.stream_ops;
 		return node;
@@ -301,7 +305,7 @@ export default class ZenFSEmscriptenPlugin implements emscripten.Plugin {
 			if (!e.code) {
 				throw e;
 			}
-			throw new this.FS.ErrnoError(this.ERRNO_CODES[e.code]);
+			throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
 		}
 		return stat.mode;
 	}

@@ -9,6 +9,7 @@
  * Adapted from Emscripten's NodeFS:
  * https://raw.github.com/kripken/emscripten/master/src/library_nodefs.js
  */
+import type { Errno } from '@zenfs/core';
 import 'emscripten'; // Note: this is for types only.
 
 export interface Stats {
@@ -57,6 +58,17 @@ export interface StreamOps {
 export declare class Stream extends FS.FSStream {
 	fd?: number;
 	nfd?: number;
+}
+
+export interface PATH {
+	join(...parts: string[]): string;
+	join2(a: string, b: string): string;
+}
+
+export interface Module {
+	FS: typeof FS;
+	PATH: PATH;
+	ERRNO_CODES: typeof Errno;
 }
 
 export interface Plugin {
