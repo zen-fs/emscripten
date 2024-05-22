@@ -17,7 +17,7 @@ npm install @zenfs/emscripten
 
 > [!NOTE]
 > The examples are written in ESM.  
-> If you are using CJS, you can `require` the package.  
-> If using a browser environment without support for `type=module` in `script` tags, you can add a `script` tag to your HTML pointing to the `browser.min.js` and use the global `ZenFS_Emscripten` object.
+> For CJS, you can `require` the package.  
+> For a browser environment without support for `type=module` in `script` tags, you can add a `script` tag to your HTML pointing to the `browser.min.js` and use the global `ZenFS_Emscripten` object.
 
 No examples yet— I will add some soon
