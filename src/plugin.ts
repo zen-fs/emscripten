@@ -1,295 +1,56 @@
-import fs, { parseFlag, type Errno, type Stats } from '@zenfs/core';
-import * as emscripten from './emscripten.js';
-import { assignWithDefaults, pick } from 'utilium';
+import zfs, { Errno, parseFlag, type Stats } from '@zenfs/core';
+import 'emscripten'; // Note: this is for types only.
 
-class StreamOps implements FS.StreamOps {
-	get nodefs(): typeof fs {
-		return this._fs.nodefs;
-	}
+import EmFS = FS;
 
-	get FS() {
-		return this._fs.FS;
-	}
-
-	get PATH() {
-		return this._fs.PATH;
-	}
-
-	get ERRNO_CODES() {
-		return this._fs.ERRNO_CODES;
-	}
-
-	constructor(protected _fs: ZenFSEmscriptenNodeFS) {}
-
-	public open(stream: FS.FSStream): void {
-		const path = this._fs.realPath(stream.object);
-		try {
-			if (this.FS.isFile(stream.object.mode)) {
-				stream.nfd = this.nodefs.openSync(path, parseFlag(stream.flags));
-			}
-		} catch (e) {
-			if (!e.code) {
-				throw e;
-			}
-			throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
-		}
-	}
-
-	public close(stream: FS.FSStream): void {
-		try {
-			if (this.FS.isFile(stream.object.mode) && stream.nfd) {
-				this.nodefs.closeSync(stream.nfd);
-			}
-		} catch (e) {
-			if (!e.code) {
-				throw e;
-			}
-			throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
-		}
-	}
-
-	public read(stream: FS.FSStream, buffer: Uint8Array, offset: number, length: number, position: number): number {
-		// Avoid copying overhead by reading directly into buffer.
-		try {
-			return this.nodefs.readSync(stream.nfd, Buffer.from(buffer), offset, length, position);
-		} catch (e) {
-			throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
-		}
-	}
-
-	public write(stream: FS.FSStream, buffer: Uint8Array, offset: number, length: number, position: number): number {
-		// Avoid copying overhead.
-		try {
-			return this.nodefs.writeSync(stream.nfd, buffer, offset, length, position);
-		} catch (e) {
-			throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
-		}
-	}
-
-	public llseek(stream: FS.FSStream, offset: number, whence: number): number {
-		let position = offset;
-		if (whence === 1) {
-			// SEEK_CUR.
-			position += stream.position;
-		} else if (whence === 2) {
-			// SEEK_END.
-			if (this.FS.isFile(stream.object.mode)) {
-				try {
-					const stat = this.nodefs.fstatSync(stream.nfd);
-					position += stat.size;
-				} catch (e) {
-					throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
-				}
-			}
-		}
-
-		if (position < 0) {
-			throw new this.FS.ErrnoError(this.ERRNO_CODES.EINVAL);
-		}
-
-		stream.position = position;
-		return position;
-	}
+interface Mount extends EmFS.Mount {
+	opts: { root?: string };
 }
 
-class EntryOps implements FS.NodeOps {
-	get nodefs(): typeof fs {
-		return this._fs.nodefs;
-	}
-
-	get FS() {
-		return this._fs.FS;
-	}
-
-	get PATH() {
-		return this._fs.PATH;
-	}
-
-	get ERRNO_CODES() {
-		return this._fs.ERRNO_CODES;
-	}
-
-	constructor(protected _fs: ZenFSEmscriptenNodeFS) {}
-
-	public getattr(node: FS.FSNode): Stats {
-		const path = this._fs.realPath(node);
-		let stat: Stats;
-		try {
-			stat = this.nodefs.lstatSync(path);
-		} catch (e) {
-			if (!e.code) {
-				throw e;
-			}
-			throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
-		}
-		return stat;
-	}
-
-	public setattr(node: FS.FSNode, attr: FS.Stats): void {
-		const path = this._fs.realPath(node);
-		try {
-			if (attr.mode !== undefined) {
-				this.nodefs.chmodSync(path, attr.mode);
-				// update the common node structure mode as well
-				node.mode = attr.mode;
-			}
-			if (attr.timestamp !== undefined) {
-				const date = new Date(attr.timestamp);
-				this.nodefs.utimesSync(path, date, date);
-			}
-		} catch (e) {
-			if (!e.code) {
-				throw e;
-			}
-			// Ignore not supported errors. Emscripten does utimesSync when it
-			// writes files, but never really requires the value to be set.
-			if (e.code !== 'ENOTSUP') {
-				throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
-			}
-		}
-		if (attr.size !== undefined) {
-			try {
-				this.nodefs.truncateSync(path, attr.size);
-			} catch (e) {
-				if (!e.code) {
-					throw e;
-				}
-				throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
-			}
-		}
-	}
-
-	public lookup(parent: FS.FSNode, name: string): FS.FSNode {
-		const path = this.PATH.join2(this._fs.realPath(parent), name);
-		const mode = this._fs.getMode(path);
-		return this._fs.createNode(parent, name, mode);
-	}
-
-	public mknod(parent: FS.FSNode, name: string, mode: number, dev: number): FS.FSNode {
-		const node = this._fs.createNode(parent, name, mode, dev);
-		// create the backing node for this in the fs root as well
-		const path = this._fs.realPath(node);
-		try {
-			if (this.FS.isDir(node.mode)) {
-				this.nodefs.mkdirSync(path, node.mode);
-			} else {
-				this.nodefs.writeFileSync(path, '', { mode: node.mode });
-			}
-		} catch (e) {
-			if (!e.code) {
-				throw e;
-			}
-			throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
-		}
-		return node;
-	}
-
-	public rename(oldNode: FS.FSNode, newDir: FS.FSNode, newName: string): void {
-		const oldPath = this._fs.realPath(oldNode);
-		const newPath = this.PATH.join2(this._fs.realPath(newDir), newName);
-		try {
-			this.nodefs.renameSync(oldPath, newPath);
-			// This logic is missing from the original NodeFS,
-			// causing Emscripten's filesystem to think that the old file still exists.
-			oldNode.name = newName;
-			oldNode.parent = newDir;
-		} catch (e) {
-			if (!e.code) {
-				throw e;
-			}
-			throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
-		}
-	}
-
-	public unlink(parent: FS.FSNode, name: string): void {
-		const path = this.PATH.join2(this._fs.realPath(parent), name);
-		try {
-			this.nodefs.unlinkSync(path);
-		} catch (e) {
-			if (!e.code) {
-				throw e;
-			}
-			throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
-		}
-	}
-
-	public rmdir(parent: FS.FSNode, name: string) {
-		const path = this.PATH.join2(this._fs.realPath(parent), name);
-		try {
-			this.nodefs.rmdirSync(path);
-		} catch (e) {
-			if (!e.code) {
-				throw e;
-			}
-			throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
-		}
-	}
-
-	public readdir(node: FS.FSNode): string[] {
-		const path = this._fs.realPath(node);
-		try {
-			// Node does not list . and .. in directory listings,
-			// but Emscripten expects it.
-			const contents = this.nodefs.readdirSync(path);
-			contents.push('.', '..');
-			return contents;
-		} catch (e) {
-			if (!e.code) {
-				throw e;
-			}
-			throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
-		}
-	}
-
-	public symlink(parent: FS.FSNode, newName: string, oldPath: string): void {
-		const newPath = this.PATH.join2(this._fs.realPath(parent), newName);
-		try {
-			this.nodefs.symlinkSync(oldPath, newPath);
-		} catch (e) {
-			if (!e.code) {
-				throw e;
-			}
-			throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
-		}
-	}
-
-	public readlink(node: FS.FSNode): string {
-		const path = this._fs.realPath(node);
-		try {
-			return this.nodefs.readlinkSync(path, 'utf8');
-		} catch (e) {
-			if (!e.code) {
-				throw e;
-			}
-			throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
-		}
-	}
+interface Node extends EmFS.FSNode {
+	node_ops?: EmFS.NodeOps;
+	stream_ops?: EmFS.StreamOps;
+	mount: Mount;
+	parent: Node;
 }
 
-export default class ZenFSEmscriptenNodeFS implements emscripten.FS {
-	public node_ops: FS.NodeOps = new EntryOps(this);
-	public stream_ops: FS.StreamOps = new StreamOps(this);
+interface EmscriptenNodeFS {
+	node_ops: EmFS.NodeOps;
+	stream_ops: EmFS.StreamOps;
+	mount(mount: EmFS.Mount & { opts: { root: string } }): EmFS.FSNode;
+	createNode(parent: EmFS.FSNode, name: string, mode: number, dev?: unknown): EmFS.FSNode;
+	getMode(path: string): number;
+	realPath(node: EmFS.FSNode): string;
+}
 
-	public readonly FS: typeof FS;
-	public readonly PATH: emscripten.PATH;
-	public readonly ERRNO_CODES: typeof Errno;
-
+/**
+ * Defines an Emscripten file system object for use in the Emscripten virtual filesystem.
+ * Allows you to use synchronous file systems from within Emscripten.
+ *
+ * You can construct this, mount it using its mount command, and then mount it into Emscripten.
+ *
+ * Adapted from Emscripten's NodeFS:
+ * @see https://github.com/emscripten-core/emscripten/blob/main/src/library_nodefs.js
+ */
+export default class ZenEmscriptenNodeFS implements EmscriptenNodeFS {
 	constructor(
-		emscripten: emscripten.Module,
-		public readonly nodefs: typeof fs = fs
-	) {
-		assignWithDefaults(this, pick(emscripten, 'FS', 'PATH', 'ERRNO_CODES'));
-	}
+		public readonly fs: typeof zfs = zfs,
+		public readonly em_fs: typeof EmFS,
+		protected path: {
+			join(...parts: string[]): string;
+			join2(a: string, b: string): string;
+		}
+	) {}
 
-	public mount(mount: emscripten.Mount): emscripten.Node {
+	public mount(mount: Mount): Node {
 		return this.createNode(null, '/', this.getMode(mount.opts.root), 0);
 	}
 
-	public createNode(parent: emscripten.Node | null, name: string, mode: number, rdev?: number): emscripten.Node {
-		if (!this.FS.isDir(mode) && !this.FS.isFile(mode) && !this.FS.isLink(mode)) {
-			throw new this.FS.ErrnoError(this.ERRNO_CODES.EINVAL);
+	public createNode(parent: Node | null, name: string, mode: number, rdev?: number): Node {
+		if (!this.em_fs.isDir(mode) && !this.em_fs.isFile(mode) && !this.em_fs.isLink(mode)) {
+			throw new this.em_fs.ErrnoError(Errno.EINVAL);
 		}
-		const node: emscripten.Node = new this.FS.FSNode(parent, name, mode, rdev);
+		const node: Node = new this.em_fs.FSNode(parent, name, mode, rdev);
 		node.node_ops = this.node_ops;
 		node.stream_ops = this.stream_ops;
 		return node;
@@ -298,17 +59,17 @@ export default class ZenFSEmscriptenNodeFS implements emscripten.FS {
 	public getMode(path: string): number {
 		let stat: Stats;
 		try {
-			stat = this.nodefs.lstatSync(path);
+			stat = this.fs.lstatSync(path);
 		} catch (e) {
 			if (!e.code) {
 				throw e;
 			}
-			throw new this.FS.ErrnoError(this.ERRNO_CODES[(e as FS.ErrnoError).code]);
+			throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
 		}
 		return stat.mode;
 	}
 
-	public realPath(node: emscripten.Node): string {
+	public realPath(node: Node): string {
 		const parts: string[] = [];
 		while (node.parent !== node) {
 			parts.push(node.name);
@@ -316,6 +77,229 @@ export default class ZenFSEmscriptenNodeFS implements emscripten.FS {
 		}
 		parts.push(node.mount.opts.root);
 		parts.reverse();
-		return this.PATH.join(...parts);
+		return this.path.join(...parts);
 	}
+
+	public node_ops: EmFS.NodeOps = {
+		getattr: (node: EmFS.FSNode): Stats => {
+			const path = this.realPath(node);
+			let stat: Stats;
+			try {
+				stat = this.fs.lstatSync(path);
+			} catch (e) {
+				if (!e.code) {
+					throw e;
+				}
+				throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
+			}
+			return stat;
+		},
+
+		setattr: (node: EmFS.FSNode, attr: EmFS.Stats): void => {
+			const path = this.realPath(node);
+			try {
+				if (attr.mode !== undefined) {
+					this.fs.chmodSync(path, attr.mode);
+					// update the common node structure mode as well
+					node.mode = attr.mode;
+				}
+				if (attr.timestamp !== undefined) {
+					const date = new Date(attr.timestamp);
+					this.fs.utimesSync(path, date, date);
+				}
+			} catch (e) {
+				if (!e.code) {
+					throw e;
+				}
+				// Ignore not supported errors. Emscripten does utimesSync when it
+				// writes files, but never really requires the value to be set.
+				if (e.code !== 'ENOTSUP') {
+					throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
+				}
+			}
+			if (attr.size !== undefined) {
+				try {
+					this.fs.truncateSync(path, attr.size);
+				} catch (e) {
+					if (!e.code) {
+						throw e;
+					}
+					throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
+				}
+			}
+		},
+
+		lookup: (parent: EmFS.FSNode, name: string): EmFS.FSNode => {
+			const path = this.path.join2(this.realPath(parent), name);
+			const mode = this.getMode(path);
+			return this.createNode(parent, name, mode);
+		},
+
+		mknod: (parent: EmFS.FSNode, name: string, mode: number, dev: number): EmFS.FSNode => {
+			const node = this.createNode(parent, name, mode, dev);
+			// create the backing node for this in the fs root as well
+			const path = this.realPath(node);
+			try {
+				if (this.em_fs.isDir(node.mode)) {
+					this.fs.mkdirSync(path, node.mode);
+				} else {
+					this.fs.writeFileSync(path, '', { mode: node.mode });
+				}
+			} catch (e) {
+				if (!e.code) {
+					throw e;
+				}
+				throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
+			}
+			return node;
+		},
+
+		rename: (oldNode: EmFS.FSNode, newDir: EmFS.FSNode, newName: string): void => {
+			const oldPath = this.realPath(oldNode);
+			const newPath = this.path.join2(this.realPath(newDir), newName);
+			try {
+				this.fs.renameSync(oldPath, newPath);
+				// This logic is missing from the original NodeFS,
+				// causing Emscripten's filesystem to think that the old file still exists.
+				oldNode.name = newName;
+				oldNode.parent = newDir;
+			} catch (e) {
+				if (!e.code) {
+					throw e;
+				}
+				throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
+			}
+		},
+
+		unlink: (parent: EmFS.FSNode, name: string): void => {
+			const path = this.path.join2(this.realPath(parent), name);
+			try {
+				this.fs.unlinkSync(path);
+			} catch (e) {
+				if (!e.code) {
+					throw e;
+				}
+				throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
+			}
+		},
+
+		rmdir: (parent: EmFS.FSNode, name: string) => {
+			const path = this.path.join2(this.realPath(parent), name);
+			try {
+				this.fs.rmdirSync(path);
+			} catch (e) {
+				if (!e.code) {
+					throw e;
+				}
+				throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
+			}
+		},
+
+		readdir: (node: EmFS.FSNode): string[] => {
+			const path = this.realPath(node);
+			try {
+				// Node does not list . and .. in directory listings,
+				// but Emscripten expects it.
+				const contents = this.fs.readdirSync(path);
+				contents.push('.', '..');
+				return contents;
+			} catch (e) {
+				if (!e.code) {
+					throw e;
+				}
+				throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
+			}
+		},
+
+		symlink: (parent: EmFS.FSNode, newName: string, oldPath: string): void => {
+			const newPath = this.path.join2(this.realPath(parent), newName);
+			try {
+				this.fs.symlinkSync(oldPath, newPath);
+			} catch (e) {
+				if (!e.code) {
+					throw e;
+				}
+				throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
+			}
+		},
+
+		readlink: (node: EmFS.FSNode): string => {
+			const path = this.realPath(node);
+			try {
+				return this.fs.readlinkSync(path, 'utf8');
+			} catch (e) {
+				if (!e.code) {
+					throw e;
+				}
+				throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
+			}
+		},
+	};
+	public stream_ops: EmFS.StreamOps = {
+		open: (stream: EmFS.FSStream): void => {
+			const path = this.realPath(stream.object);
+			try {
+				if (this.em_fs.isFile(stream.object.mode)) {
+					stream.nfd = this.fs.openSync(path, parseFlag(stream.flags));
+				}
+			} catch (e) {
+				if (!e.code) {
+					throw e;
+				}
+				throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
+			}
+		},
+		close: (stream: EmFS.FSStream): void => {
+			try {
+				if (this.em_fs.isFile(stream.object.mode) && stream.nfd) {
+					this.fs.closeSync(stream.nfd);
+				}
+			} catch (e) {
+				if (!e.code) {
+					throw e;
+				}
+				throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
+			}
+		},
+		read: (stream: EmFS.FSStream, buffer: Uint8Array, offset: number, length: number, position: number): number => {
+			// Avoid copying overhead by reading directly into buffer.
+			try {
+				return this.fs.readSync(stream.nfd, Buffer.from(buffer), offset, length, position);
+			} catch (e) {
+				throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
+			}
+		},
+		write: (stream: EmFS.FSStream, buffer: Uint8Array, offset: number, length: number, position: number): number => {
+			// Avoid copying overhead.
+			try {
+				return this.fs.writeSync(stream.nfd, buffer, offset, length, position);
+			} catch (e) {
+				throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
+			}
+		},
+		llseek: (stream: EmFS.FSStream, offset: number, whence: number): number => {
+			let position = offset;
+			if (whence === 1) {
+				// SEEK_CUR.
+				position += stream.position;
+			} else if (whence === 2) {
+				// SEEK_END.
+				if (this.em_fs.isFile(stream.object.mode)) {
+					try {
+						const stat = this.fs.fstatSync(stream.nfd);
+						position += stat.size;
+					} catch (e) {
+						throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
+					}
+				}
+			}
+
+			if (position < 0) {
+				throw new this.em_fs.ErrnoError(Errno.EINVAL);
+			}
+
+			stream.position = position;
+			return position;
+		},
+	};
 }

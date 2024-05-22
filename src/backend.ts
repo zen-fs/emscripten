@@ -27,10 +27,10 @@ function convertError(e: FS.ErrnoError & { node?: FS.FSNode }, path: string = ''
 
 export class EmscriptenFile extends File {
 	constructor(
-		protected _fs: EmscriptenFS,
-		protected _FS: typeof FS,
+		protected fs: EmscriptenFS,
+		protected em: typeof FS,
 		public readonly path: string,
-		protected _stream: FS.FSStream
+		protected stream: FS.FSStream
 	) {
 		super();
 	}
@@ -42,7 +42,7 @@ export class EmscriptenFile extends File {
 	}
 	public closeSync(): void {
 		try {
-			this._FS.close(this._stream);
+			this.em.close(this.stream);
 		} catch (e) {
 			throw convertError(e, this.path);
 		}
@@ -52,7 +52,7 @@ export class EmscriptenFile extends File {
 	}
 	public statSync(): Stats {
 		try {
-			return this._fs.statSync(this.path);
+			return this.fs.statSync(this.path);
 		} catch (e) {
 			throw convertError(e, this.path);
 		}
@@ -62,7 +62,7 @@ export class EmscriptenFile extends File {
 	}
 	public truncateSync(len: number): void {
 		try {
-			this._FS.ftruncate(this._stream.fd, len);
+			this.em.ftruncate(this.stream.fd, len);
 		} catch (e) {
 			throw convertError(e, this.path);
 		}
@@ -70,11 +70,10 @@ export class EmscriptenFile extends File {
 	public async write(buffer: Buffer, offset: number, length: number, position: number): Promise<number> {
 		return this.writeSync(buffer, offset, length, position);
 	}
-	public writeSync(buffer: Buffer, offset: number, length: number, position: number | null): number {
+	public writeSync(buffer: Buffer, offset: number, length: number, position?: number): number {
 		try {
 			// Emscripten is particular about what position is set to.
-			const emPosition = position === null ? undefined : position;
-			return this._FS.write(this._stream, buffer, offset, length, emPosition);
+			return this.em.write(this.stream, buffer, offset, length, position);
 		} catch (e) {
 			throw convertError(e, this.path);
 		}
@@ -82,11 +81,10 @@ export class EmscriptenFile extends File {
 	public async read<TBuffer extends ArrayBufferView>(buffer: TBuffer, offset: number, length: number, position: number): Promise<{ bytesRead: number; buffer: TBuffer }> {
 		return { bytesRead: this.readSync(buffer, offset, length, position), buffer };
 	}
-	public readSync(buffer: ArrayBufferView, offset: number, length: number, position: number | null): number {
+	public readSync(buffer: ArrayBufferView, offset: number, length: number, position?: number): number {
 		try {
 			// Emscripten is particular about what position is set to.
-			const emPosition = position === null ? undefined : position;
-			return this._FS.read(this._stream, buffer, offset, length, emPosition);
+			return this.em.read(this.stream, buffer, offset, length, position);
 		} catch (e) {
 			throw convertError(e, this.path);
 		}
@@ -102,7 +100,7 @@ export class EmscriptenFile extends File {
 	}
 	public chownSync(uid: number, gid: number): void {
 		try {
-			this._FS.fchown(this._stream.fd, uid, gid);
+			this.em.fchown(this.stream.fd, uid, gid);
 		} catch (e) {
 			throw convertError(e, this.path);
 		}
@@ -112,7 +110,7 @@ export class EmscriptenFile extends File {
 	}
 	public chmodSync(mode: number): void {
 		try {
-			this._FS.fchmod(this._stream.fd, mode);
+			this.em.fchmod(this.stream.fd, mode);
 		} catch (e) {
 			throw convertError(e, this.path);
 		}
@@ -121,7 +119,7 @@ export class EmscriptenFile extends File {
 		return this.utimesSync(atime, mtime);
 	}
 	public utimesSync(atime: Date, mtime: Date): void {
-		this._fs.utimesSync(this.path, atime, mtime);
+		this.fs.utimesSync(this.path, atime, mtime);
 	}
 	public async _setType(type: FileType): Promise<void> {
 		throw ErrnoError.With('ENOSYS', this.path, '_setType');
@@ -129,16 +127,6 @@ export class EmscriptenFile extends File {
 	public _setTypeSync(type: FileType): void {
 		throw ErrnoError.With('ENOSYS', this.path, '_setType');
 	}
-}
-
-/**
- * Configuration options for Emscripten file system.
- */
-export interface EmscriptenOptions {
-	/**
-	 * The Emscripten file system to use
-	 */
-	FS: typeof FS;
 }
 
 /**
@@ -182,9 +170,8 @@ export class EmscriptenFS extends Sync(FileSystem) {
 	public statSync(path: string): Stats {
 		try {
 			const stats = this.em.stat(path);
-			const itemType = this.modeToFileType(stats.mode);
 			return new Stats({
-				mode: itemType | stats.mode,
+				mode: stats.mode,
 				size: stats.size,
 				atimeMs: stats.atime.getTime(),
 				mtimeMs: stats.mtime.getTime(),
@@ -307,18 +294,16 @@ export class EmscriptenFS extends Sync(FileSystem) {
 			throw convertError(e, path);
 		}
 	}
+}
 
-	private modeToFileType(mode: number): FileType {
-		if (this.em.isDir(mode)) {
-			return FileType.DIRECTORY;
-		} else if (this.em.isFile(mode)) {
-			return FileType.FILE;
-		} else if (this.em.isLink(mode)) {
-			return FileType.SYMLINK;
-		} else {
-			throw new ErrnoError(Errno.EPERM, 'Invalid mode: ' + mode);
-		}
-	}
+/**
+ * Configuration options for Emscripten file system.
+ */
+export interface EmscriptenOptions {
+	/**
+	 * The Emscripten file system to use
+	 */
+	FS: typeof FS;
 }
 
 export const Emscripten = {
