@@ -1,7 +1,5 @@
 import zfs, { Errno, parseFlag, type Stats } from '@zenfs/core';
-import 'emscripten'; // Note: this is for types only.
-
-import EmFS = FS;
+import type { EmFS } from './emscripten.js';
 
 interface Mount extends EmFS.Mount {
 	opts: { root?: string };

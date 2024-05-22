@@ -31,7 +31,7 @@
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
 		"lint": "tsc -p tsconfig.json --noEmit && eslint src",
-		"build": "npx build --package=@zenfs/core --globalName ZenFS_Emscripten --entry src/index.ts",
+		"build": "npx build --package=@zenfs/core --globalName ZenFS_Emscripten --entry src/index.ts --",
 		"build:docs": "typedoc --out docs --name 'ZenFS Emscripten' src/index.ts",
 		"prepublishOnly": "npm run build",
 		"postinstall": "patch-package"

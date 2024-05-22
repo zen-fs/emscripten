@@ -6,7 +6,6 @@ import { File } from '@zenfs/core/file.js';
 import { FileSystem, FileSystemMetadata, Sync } from '@zenfs/core/filesystem.js';
 import { FileType, Stats } from '@zenfs/core/stats.js';
 import { Buffer } from 'buffer';
-import './emscripten.js';
 
 /**
  * @hidden
