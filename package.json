@@ -20,6 +20,12 @@
 	"bugs": {
 		"url": "https://github.com/zen-fs/emscripten/issues"
 	},
+	"files": [
+		"dist",
+		"src",
+		"license.md",
+		"tsconfig.json"
+	],
 	"engines": {
 		"node": ">= 18"
 	},
@@ -34,6 +40,7 @@
 		"build": "npx build --package=@zenfs/core --globalName ZenFS_Emscripten --entry src/index.ts --",
 		"build:docs": "typedoc --out docs --name 'ZenFS Emscripten' src/index.ts",
 		"prepublishOnly": "npm run build",
+		"test": "echo No tests yet",
 		"postinstall": "patch-package"
 	},
 	"devDependencies": {
