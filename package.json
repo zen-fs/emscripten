@@ -45,12 +45,11 @@
 	},
 	"devDependencies": {
 		"@fal-works/esbuild-plugin-global-externals": "^2.1.2",
-		"@types/emscripten": "^1.39.12",
+		"@types/emscripten": "^1.39.13",
 		"@typescript-eslint/eslint-plugin": "^7.7.0",
 		"@typescript-eslint/parser": "^7.7.0",
 		"esbuild": "^0.17.18",
 		"eslint": "^8.36.0",
-		"patch-package": "^8.0.0",
 		"prettier": "^3.2.5",
 		"typedoc": "^0.25.1",
 		"typescript": "5.2.2"
