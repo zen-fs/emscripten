@@ -40,8 +40,7 @@
 		"build": "npx build --package=@zenfs/core --globalName ZenFS_Emscripten --entry src/index.ts --",
 		"build:docs": "typedoc --out docs --name 'ZenFS Emscripten' src/index.ts",
 		"prepublishOnly": "npm run build",
-		"test": "echo No tests yet",
-		"postinstall": "patch-package"
+		"test": "echo No tests yet"
 	},
 	"devDependencies": {
 		"@fal-works/esbuild-plugin-global-externals": "^2.1.2",
