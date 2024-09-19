@@ -20,4 +20,4 @@ npm install @zenfs/emscripten
 > For CJS, you can `require` the package.  
 > For a browser environment without support for `type=module` in `script` tags, you can add a `script` tag to your HTML pointing to the `browser.min.js` and use the global `ZenFS_Emscripten` object.
 
-No examples yet— I will add some soon
+No examples yet. Please feel free to open a PR.
