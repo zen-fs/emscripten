@@ -9,9 +9,10 @@ import { Buffer } from 'buffer';
 /**
  * @hidden
  */
-function convertError(e: FS.ErrnoError & { node?: FS.FSNode }, path: string = ''): ErrnoError {
-	const errno = e.errno;
-	let parent = e.node;
+function convertError(e: unknown, path: string = ''): ErrnoError {
+	const error = e as FS.ErrnoError & { node?: FS.FSNode };
+	const errno = error.errno as Errno;
+	let parent = error.node;
 	const paths: string[] = [];
 	while (parent) {
 		paths.unshift(parent.name);
@@ -33,7 +34,7 @@ export class EmscriptenFile extends File {
 		super();
 	}
 	public get position(): number {
-		return;
+		return this.stream.position;
 	}
 	public async close(): Promise<void> {
 		return this.closeSync();
@@ -60,7 +61,7 @@ export class EmscriptenFile extends File {
 	}
 	public truncateSync(len: number): void {
 		try {
-			this.em.ftruncate(this.stream.fd, len);
+			this.em.ftruncate(this.stream.fd!, len);
 		} catch (e) {
 			throw convertError(e, this.path);
 		}
@@ -98,7 +99,7 @@ export class EmscriptenFile extends File {
 	}
 	public chownSync(uid: number, gid: number): void {
 		try {
-			this.em.fchown(this.stream.fd, uid, gid);
+			this.em.fchown(this.stream.fd!, uid, gid);
 		} catch (e) {
 			throw convertError(e, this.path);
 		}
@@ -108,7 +109,7 @@ export class EmscriptenFile extends File {
 	}
 	public chmodSync(mode: number): void {
 		try {
-			this.em.fchmod(this.stream.fd, mode);
+			this.em.fchmod(this.stream.fd!, mode);
 		} catch (e) {
 			throw convertError(e, this.path);
 		}
@@ -160,7 +161,7 @@ export class EmscriptenFS extends Sync(FileSystem) {
 	public renameSync(oldPath: string, newPath: string): void {
 		try {
 			this.em.rename(oldPath, newPath);
-		} catch (e) {
+		} catch (e: any) {
 			throw convertError(e, e.errno != Errno.ENOENT ? '' : this.existsSync(oldPath) ? newPath : oldPath);
 		}
 	}

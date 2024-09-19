@@ -41,14 +41,14 @@ export default class ZenEmscriptenNodeFS implements EmscriptenNodeFS {
 	) {}
 
 	public mount(mount: Mount): Node {
-		return this.createNode(null, '/', this.getMode(mount.opts.root), 0);
+		return this.createNode(null, '/', this.getMode(mount.opts.root!), 0);
 	}
 
 	public createNode(parent: Node | null, name: string, mode: number, rdev?: number): Node {
 		if (!this.em_fs.isDir(mode) && !this.em_fs.isFile(mode) && !this.em_fs.isLink(mode)) {
 			throw new this.em_fs.ErrnoError(Errno.EINVAL);
 		}
-		const node: Node = new this.em_fs.FSNode(parent, name, mode, rdev);
+		const node: Node = new this.em_fs.FSNode(parent!, name, mode, rdev!);
 		node.node_ops = this.node_ops;
 		node.stream_ops = this.stream_ops;
 		return node;
@@ -58,11 +58,11 @@ export default class ZenEmscriptenNodeFS implements EmscriptenNodeFS {
 		let stat: Stats;
 		try {
 			stat = this.fs.lstatSync(path);
-		} catch (e) {
+		} catch (e: any) {
 			if (!e.code) {
 				throw e;
 			}
-			throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
+			throw new this.em_fs.ErrnoError(e.errno);
 		}
 		return stat.mode;
 	}
@@ -73,7 +73,7 @@ export default class ZenEmscriptenNodeFS implements EmscriptenNodeFS {
 			parts.push(node.name);
 			node = node.parent;
 		}
-		parts.push(node.mount.opts.root);
+		parts.push(node.mount.opts.root!);
 		parts.reverse();
 		return this.path.join(...parts);
 	}
@@ -84,11 +84,11 @@ export default class ZenEmscriptenNodeFS implements EmscriptenNodeFS {
 			let stat: Stats;
 			try {
 				stat = this.fs.lstatSync(path);
-			} catch (e) {
+			} catch (e: any) {
 				if (!e.code) {
 					throw e;
 				}
-				throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
+				throw new this.em_fs.ErrnoError(e.errno);
 			}
 			return stat;
 		},
@@ -105,24 +105,24 @@ export default class ZenEmscriptenNodeFS implements EmscriptenNodeFS {
 					const date = new Date(attr.timestamp);
 					this.fs.utimesSync(path, date, date);
 				}
-			} catch (e) {
+			} catch (e: any) {
 				if (!e.code) {
 					throw e;
 				}
 				// Ignore not supported errors. Emscripten does utimesSync when it
 				// writes files, but never really requires the value to be set.
 				if (e.code !== 'ENOTSUP') {
-					throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
+					throw new this.em_fs.ErrnoError(e.errno);
 				}
 			}
 			if (attr.size !== undefined) {
 				try {
 					this.fs.truncateSync(path, attr.size);
-				} catch (e) {
+				} catch (e: any) {
 					if (!e.code) {
 						throw e;
 					}
-					throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
+					throw new this.em_fs.ErrnoError(e.errno);
 				}
 			}
 		},
@@ -143,11 +143,11 @@ export default class ZenEmscriptenNodeFS implements EmscriptenNodeFS {
 				} else {
 					this.fs.writeFileSync(path, '', { mode: node.mode });
 				}
-			} catch (e) {
+			} catch (e: any) {
 				if (!e.code) {
 					throw e;
 				}
-				throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
+				throw new this.em_fs.ErrnoError(e.errno);
 			}
 			return node;
 		},
@@ -161,11 +161,11 @@ export default class ZenEmscriptenNodeFS implements EmscriptenNodeFS {
 				// causing Emscripten's filesystem to think that the old file still exists.
 				oldNode.name = newName;
 				oldNode.parent = newDir;
-			} catch (e) {
+			} catch (e: any) {
 				if (!e.code) {
 					throw e;
 				}
-				throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
+				throw new this.em_fs.ErrnoError(e.errno);
 			}
 		},
 
@@ -173,11 +173,11 @@ export default class ZenEmscriptenNodeFS implements EmscriptenNodeFS {
 			const path = this.path.join2(this.realPath(parent), name);
 			try {
 				this.fs.unlinkSync(path);
-			} catch (e) {
+			} catch (e: any) {
 				if (!e.code) {
 					throw e;
 				}
-				throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
+				throw new this.em_fs.ErrnoError(e.errno);
 			}
 		},
 
@@ -185,11 +185,11 @@ export default class ZenEmscriptenNodeFS implements EmscriptenNodeFS {
 			const path = this.path.join2(this.realPath(parent), name);
 			try {
 				this.fs.rmdirSync(path);
-			} catch (e) {
+			} catch (e: any) {
 				if (!e.code) {
 					throw e;
 				}
-				throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
+				throw new this.em_fs.ErrnoError(e.errno);
 			}
 		},
 
@@ -201,11 +201,11 @@ export default class ZenEmscriptenNodeFS implements EmscriptenNodeFS {
 				const contents = this.fs.readdirSync(path);
 				contents.push('.', '..');
 				return contents;
-			} catch (e) {
+			} catch (e: any) {
 				if (!e.code) {
 					throw e;
 				}
-				throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
+				throw new this.em_fs.ErrnoError(e.errno);
 			}
 		},
 
@@ -213,11 +213,11 @@ export default class ZenEmscriptenNodeFS implements EmscriptenNodeFS {
 			const newPath = this.path.join2(this.realPath(parent), newName);
 			try {
 				this.fs.symlinkSync(oldPath, newPath);
-			} catch (e) {
+			} catch (e: any) {
 				if (!e.code) {
 					throw e;
 				}
-				throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
+				throw new this.em_fs.ErrnoError(e.errno);
 			}
 		},
 
@@ -225,11 +225,11 @@ export default class ZenEmscriptenNodeFS implements EmscriptenNodeFS {
 			const path = this.realPath(node);
 			try {
 				return this.fs.readlinkSync(path, 'utf8');
-			} catch (e) {
+			} catch (e: any) {
 				if (!e.code) {
 					throw e;
 				}
-				throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
+				throw new this.em_fs.ErrnoError(e.errno);
 			}
 		},
 	};
@@ -240,11 +240,11 @@ export default class ZenEmscriptenNodeFS implements EmscriptenNodeFS {
 				if (this.em_fs.isFile(stream.object.mode)) {
 					stream.nfd = this.fs.openSync(path, parseFlag(stream.flags));
 				}
-			} catch (e) {
+			} catch (e: any) {
 				if (!e.code) {
 					throw e;
 				}
-				throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
+				throw new this.em_fs.ErrnoError(e.errno);
 			}
 		},
 		close: (stream: EmFS.FSStream): void => {
@@ -252,27 +252,27 @@ export default class ZenEmscriptenNodeFS implements EmscriptenNodeFS {
 				if (this.em_fs.isFile(stream.object.mode) && stream.nfd) {
 					this.fs.closeSync(stream.nfd);
 				}
-			} catch (e) {
+			} catch (e: any) {
 				if (!e.code) {
 					throw e;
 				}
-				throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
+				throw new this.em_fs.ErrnoError(e.errno);
 			}
 		},
 		read: (stream: EmFS.FSStream, buffer: Uint8Array, offset: number, length: number, position: number): number => {
 			// Avoid copying overhead by reading directly into buffer.
 			try {
-				return this.fs.readSync(stream.nfd, Buffer.from(buffer), offset, length, position);
-			} catch (e) {
-				throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
+				return this.fs.readSync(stream.nfd!, Buffer.from(buffer), offset, length, position);
+			} catch (e: any) {
+				throw new this.em_fs.ErrnoError(e.errno);
 			}
 		},
 		write: (stream: EmFS.FSStream, buffer: Uint8Array, offset: number, length: number, position: number): number => {
 			// Avoid copying overhead.
 			try {
-				return this.fs.writeSync(stream.nfd, buffer, offset, length, position);
-			} catch (e) {
-				throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
+				return this.fs.writeSync(stream.nfd!, buffer, offset, length, position);
+			} catch (e: any) {
+				throw new this.em_fs.ErrnoError(e.errno);
 			}
 		},
 		llseek: (stream: EmFS.FSStream, offset: number, whence: number): number => {
@@ -280,15 +280,12 @@ export default class ZenEmscriptenNodeFS implements EmscriptenNodeFS {
 			if (whence === 1) {
 				// SEEK_CUR.
 				position += stream.position;
-			} else if (whence === 2) {
+			} else if (whence === 2 && this.em_fs.isFile(stream.object.mode)) {
 				// SEEK_END.
-				if (this.em_fs.isFile(stream.object.mode)) {
-					try {
-						const stat = this.fs.fstatSync(stream.nfd);
-						position += stat.size;
-					} catch (e) {
-						throw new this.em_fs.ErrnoError(Errno[(e as EmFS.ErrnoError).code]);
-					}
+				try {
+					position += this.fs.fstatSync(stream.nfd!).size;
+				} catch (e: any) {
+					throw new this.em_fs.ErrnoError(e.errno);
 				}
 			}
 
