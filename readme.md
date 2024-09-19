@@ -2,7 +2,7 @@
 
 [ZenFS](https://github.com/zen-fs/core) backend for usage with Emscripten.
 
-> ![IMPORTANT]
+> [!IMPORTANT]
 > Please read the ZenFS core documentation!
 
 For more information, see the [docs](https://zen-fs.github.io/emscripten).
