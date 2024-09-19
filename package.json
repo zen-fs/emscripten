@@ -54,9 +54,9 @@
 		"typescript": "5.2.2"
 	},
 	"peerDependencies": {
-		"@zenfs/core": "~0.11.2"
+		"@zenfs/core": ">=0.18.0"
 	},
 	"dependencies": {
-		"utilium": "^0.3.4"
+		"utilium": ">=0.4.0"
 	}
 }

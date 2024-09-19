@@ -1,9 +1,8 @@
-import type { Backend } from '@zenfs/core';
-import { Cred } from '@zenfs/core/cred.js';
+import { Sync, type Backend } from '@zenfs/core';
 import { basename, dirname } from '@zenfs/core/emulation/path.js';
 import { Errno, ErrnoError, errorMessages } from '@zenfs/core/error.js';
 import { File } from '@zenfs/core/file.js';
-import { FileSystem, FileSystemMetadata, Sync } from '@zenfs/core/filesystem.js';
+import { FileSystem, FileSystemMetadata } from '@zenfs/core/filesystem.js';
 import { FileType, Stats } from '@zenfs/core/stats.js';
 import { Buffer } from 'buffer';
 
@@ -158,11 +157,11 @@ export class EmscriptenFS extends Sync(FileSystem) {
 		}
 	}
 
-	public renameSync(oldPath: string, newPath: string, cred: Cred): void {
+	public renameSync(oldPath: string, newPath: string): void {
 		try {
 			this.em.rename(oldPath, newPath);
 		} catch (e) {
-			throw convertError(e, e.errno != Errno.ENOENT ? '' : this.existsSync(oldPath, cred) ? newPath : oldPath);
+			throw convertError(e, e.errno != Errno.ENOENT ? '' : this.existsSync(oldPath) ? newPath : oldPath);
 		}
 	}
 
