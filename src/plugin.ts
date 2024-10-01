@@ -31,7 +31,7 @@ interface EmscriptenNodeFS {
  * @see https://github.com/emscripten-core/emscripten/blob/main/src/library_nodefs.js
  */
 export default class ZenEmscriptenNodeFS implements EmscriptenNodeFS {
-	constructor(
+	public constructor(
 		public readonly fs: typeof zfs = zfs,
 		public readonly em_fs: typeof EmFS,
 		protected path: {

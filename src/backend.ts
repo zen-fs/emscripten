@@ -25,7 +25,7 @@ function convertError(e: unknown, path: string = ''): ErrnoError {
 }
 
 export class EmscriptenFile extends File {
-	constructor(
+	public constructor(
 		protected fs: EmscriptenFS,
 		protected em: typeof FS,
 		public readonly path: string,
@@ -33,12 +33,15 @@ export class EmscriptenFile extends File {
 	) {
 		super();
 	}
+
 	public get position(): number {
 		return this.stream.position;
 	}
+
 	public async close(): Promise<void> {
 		return this.closeSync();
 	}
+
 	public closeSync(): void {
 		try {
 			this.em.close(this.stream);
@@ -46,9 +49,11 @@ export class EmscriptenFile extends File {
 			throw convertError(e, this.path);
 		}
 	}
+
 	public async stat(): Promise<Stats> {
 		return this.statSync();
 	}
+
 	public statSync(): Stats {
 		try {
 			return this.fs.statSync(this.path);
@@ -56,9 +61,11 @@ export class EmscriptenFile extends File {
 			throw convertError(e, this.path);
 		}
 	}
+
 	public async truncate(len: number): Promise<void> {
 		return this.truncateSync(len);
 	}
+
 	public truncateSync(len: number): void {
 		try {
 			this.em.ftruncate(this.stream.fd!, len);
@@ -66,9 +73,11 @@ export class EmscriptenFile extends File {
 			throw convertError(e, this.path);
 		}
 	}
+
 	public async write(buffer: Buffer, offset: number, length: number, position: number): Promise<number> {
 		return this.writeSync(buffer, offset, length, position);
 	}
+
 	public writeSync(buffer: Buffer, offset: number, length: number, position?: number): number {
 		try {
 			// Emscripten is particular about what position is set to.
@@ -77,9 +86,11 @@ export class EmscriptenFile extends File {
 			throw convertError(e, this.path);
 		}
 	}
+
 	public async read<TBuffer extends ArrayBufferView>(buffer: TBuffer, offset: number, length: number, position: number): Promise<{ bytesRead: number; buffer: TBuffer }> {
 		return { bytesRead: this.readSync(buffer, offset, length, position), buffer };
 	}
+
 	public readSync(buffer: ArrayBufferView, offset: number, length: number, position?: number): number {
 		try {
 			// Emscripten is particular about what position is set to.
@@ -88,15 +99,19 @@ export class EmscriptenFile extends File {
 			throw convertError(e, this.path);
 		}
 	}
+
 	public async sync(): Promise<void> {
 		this.syncSync();
 	}
+
 	public syncSync(): void {
 		// NOP.
 	}
+
 	public async chown(uid: number, gid: number): Promise<void> {
 		return this.chownSync(uid, gid);
 	}
+
 	public chownSync(uid: number, gid: number): void {
 		try {
 			this.em.fchown(this.stream.fd!, uid, gid);
@@ -104,9 +119,11 @@ export class EmscriptenFile extends File {
 			throw convertError(e, this.path);
 		}
 	}
+
 	public async chmod(mode: number): Promise<void> {
 		return this.chmodSync(mode);
 	}
+
 	public chmodSync(mode: number): void {
 		try {
 			this.em.fchmod(this.stream.fd!, mode);
@@ -114,15 +131,19 @@ export class EmscriptenFile extends File {
 			throw convertError(e, this.path);
 		}
 	}
+
 	public async utimes(atime: Date, mtime: Date): Promise<void> {
 		return this.utimesSync(atime, mtime);
 	}
+
 	public utimesSync(atime: Date, mtime: Date): void {
 		this.fs.utimesSync(this.path, atime, mtime);
 	}
+
 	public async _setType(type: FileType): Promise<void> {
 		throw ErrnoError.With('ENOSYS', this.path, '_setType');
 	}
+
 	public _setTypeSync(type: FileType): void {
 		throw ErrnoError.With('ENOSYS', this.path, '_setType');
 	}
