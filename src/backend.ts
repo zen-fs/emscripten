@@ -26,12 +26,12 @@ function convertError(e: unknown, path: string = ''): ErrnoError {
 
 export class EmscriptenFile extends File {
 	public constructor(
-		protected fs: EmscriptenFS,
+		public fs: EmscriptenFS,
 		protected em: typeof FS,
 		public readonly path: string,
 		protected stream: FS.FSStream
 	) {
-		super();
+		super(fs, path);
 	}
 
 	public get position(): number {
