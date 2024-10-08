@@ -54,6 +54,7 @@ export default class ZenEmscriptenNodeFS implements EmscriptenNodeFS {
 		return node;
 	}
 
+	/* eslint-disable @typescript-eslint/no-explicit-any,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-argument */
 	public getMode(path: string): number {
 		let stat: Stats;
 		try {
@@ -296,5 +297,6 @@ export default class ZenEmscriptenNodeFS implements EmscriptenNodeFS {
 			stream.position = position;
 			return position;
 		},
+		/* eslint-enable @typescript-eslint/no-explicit-any,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-argument */
 	};
 }

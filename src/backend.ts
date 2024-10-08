@@ -2,9 +2,10 @@ import { Sync, type Backend } from '@zenfs/core';
 import { basename, dirname } from '@zenfs/core/emulation/path.js';
 import { Errno, ErrnoError, errorMessages } from '@zenfs/core/error.js';
 import { File } from '@zenfs/core/file.js';
-import { FileSystem, FileSystemMetadata } from '@zenfs/core/filesystem.js';
-import { FileType, Stats } from '@zenfs/core/stats.js';
-import { Buffer } from 'buffer';
+import type { FileSystemMetadata } from '@zenfs/core/filesystem.js';
+import { FileSystem } from '@zenfs/core/filesystem.js';
+import { Stats } from '@zenfs/core/stats.js';
+import type { Buffer } from 'buffer';
 
 /**
  * @hidden
@@ -140,11 +141,11 @@ export class EmscriptenFile extends File {
 		this.fs.utimesSync(this.path, atime, mtime);
 	}
 
-	public async _setType(type: FileType): Promise<void> {
+	public async _setType(): Promise<void> {
 		throw ErrnoError.With('ENOSYS', this.path, '_setType');
 	}
 
-	public _setTypeSync(type: FileType): void {
+	public _setTypeSync(): void {
 		throw ErrnoError.With('ENOSYS', this.path, '_setType');
 	}
 }
