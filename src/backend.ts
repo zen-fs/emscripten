@@ -328,7 +328,7 @@ export interface EmscriptenOptions {
 }
 
 const _Emscripten = {
-	name: 'EmscriptenFileSystem',
+	name: 'Emscripten',
 
 	options: {
 		FS: {
