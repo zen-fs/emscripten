@@ -327,7 +327,7 @@ export interface EmscriptenOptions {
 	FS: typeof FS;
 }
 
-export const Emscripten = {
+const _Emscripten = {
 	name: 'EmscriptenFileSystem',
 
 	options: {
@@ -346,3 +346,7 @@ export const Emscripten = {
 		return new EmscriptenFS(options.FS);
 	},
 } satisfies Backend<EmscriptenFS, EmscriptenOptions>;
+type _Emscripten = typeof _Emscripten;
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+interface Emscripten extends _Emscripten {}
+export const Emscripten: Emscripten = _Emscripten;
