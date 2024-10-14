@@ -1,11 +1,16 @@
 # ZenFS Emscripten Backend
 
+> [!WARNING]
+> This package has not been extensively tested and may not be stable.
+>
+> If you find a bug, please report it. Thanks!
+
 [ZenFS](https://github.com/zen-fs/core) backend for usage with Emscripten.
+
+For more information, see the [docs](https://zen-fs.github.io/emscripten).
 
 > [!IMPORTANT]
 > Please read the ZenFS core documentation!
-
-For more information, see the [docs](https://zen-fs.github.io/emscripten).
 
 ## Installing
 
