@@ -36,17 +36,15 @@
 	"scripts": {
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
-		"lint": "tsc -p tsconfig.json --noEmit && eslint src",
-		"build": "npx build --package=@zenfs/core --globalName ZenFS_Emscripten --entry src/index.ts --",
+		"lint": "eslint src",
+		"build": "tsc -p tsconfig.json",
 		"build:docs": "typedoc --out docs --name 'ZenFS Emscripten' src/index.ts",
 		"prepublishOnly": "npm run build",
 		"test": "echo No tests yet"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.12.0",
-		"@fal-works/esbuild-plugin-global-externals": "^2.1.2",
 		"@types/emscripten": "^1.39.13",
-		"esbuild": "^0.17.18",
 		"eslint": "^9.12.0",
 		"globals": "^15.10.0",
 		"prettier": "^3.2.5",
