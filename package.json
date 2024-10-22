@@ -2,6 +2,10 @@
 	"name": "@zenfs/emscripten",
 	"version": "0.1.2",
 	"description": "Emscripten backend for ZenFS",
+	"funding": {
+		"type": "individual",
+		"url": "https://github.com/sponsors/james-pre"
+	},
 	"main": "dist/index.js",
 	"types": "src/index.ts",
 	"keywords": [
