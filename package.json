@@ -43,8 +43,7 @@
 		"lint": "eslint src",
 		"build": "tsc -p tsconfig.json",
 		"build:docs": "typedoc --out docs --name 'ZenFS Emscripten' src/index.ts",
-		"prepublishOnly": "npm run build",
-		"test": "echo No tests yet"
+		"prepublishOnly": "npm run build"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.12.0",
@@ -57,7 +56,7 @@
 		"typescript-eslint": "^8.8.1"
 	},
 	"peerDependencies": {
-		"@zenfs/core": "^1.0.4"
+		"@zenfs/core": "^1.1.0"
 	},
 	"dependencies": {
 		"utilium": ">=0.4.0"
