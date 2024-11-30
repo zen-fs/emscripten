@@ -25,7 +25,7 @@ function convertError(e: unknown, path: string = ''): ErrnoError {
 	return new ErrnoError(errno, errorMessages[errno], paths.length > 0 ? '/' + paths.join('/') : path);
 }
 
-export class EmscriptenFile extends File {
+export class EmscriptenFile extends File<EmscriptenFS> {
 	public constructor(
 		public fs: EmscriptenFS,
 		protected em: typeof FS,
@@ -171,10 +171,10 @@ export class EmscriptenFS extends Sync(FileSystem) {
 		};
 	}
 
-	public syncSync(path: string, data: Uint8Array, stats: Readonly<Stats>): void {
+	public syncSync(path: string, data?: Uint8Array, stats: Readonly<Partial<Stats>> = {}): void {
 		try {
-			this.em.writeFile(path, data);
-			this.em.chmod(path, stats.mode);
+			if (data) this.em.writeFile(path, data);
+			if (stats.mode) this.em.chmod(path, stats.mode);
 		} catch (e) {
 			throw convertError(e, path);
 		}
@@ -331,11 +331,7 @@ const _Emscripten = {
 	name: 'Emscripten',
 
 	options: {
-		FS: {
-			type: 'object',
-			required: true,
-			description: 'The Emscripten file system to use (the `FS` variable)',
-		},
+		FS: { type: 'object', required: true },
 	},
 
 	isAvailable(): boolean {
