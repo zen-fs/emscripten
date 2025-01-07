@@ -1,5 +1,5 @@
 import { Sync, type Backend } from '@zenfs/core';
-import { basename, dirname } from '@zenfs/core/path';
+import { basename, dirname } from '@zenfs/core/emulation/path.js';
 import { Errno, ErrnoError, errorMessages } from '@zenfs/core/error.js';
 import { File } from '@zenfs/core/file.js';
 import type { FileSystemMetadata } from '@zenfs/core/filesystem.js';
