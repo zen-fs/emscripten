@@ -151,7 +151,7 @@ export class EmscriptenFile extends File<EmscriptenFS> {
 }
 
 /**
- * Mounts an Emscripten file system into the BrowserFS file system.
+ * Mounts an Emscripten file system into the ZenFS file system.
  */
 export class EmscriptenFS extends Sync(FileSystem) {
 	public constructor(
