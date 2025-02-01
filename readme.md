@@ -20,11 +20,6 @@ npm install @zenfs/emscripten
 
 ## Usage
 
-> [!NOTE]
-> The examples are written in ESM.  
-> For CJS, you can `require` the package.  
-> If using a browser environment, you can use a `<script>` with `type=module` (you may need to use import maps)
-
 ```ts
 import { configure, fs } from '@zenfs/core';
 import { Emscripten } from '@zenfs/emscripten';
