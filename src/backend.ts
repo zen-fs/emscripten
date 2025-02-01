@@ -1,10 +1,6 @@
-import { Sync, type Backend } from '@zenfs/core';
-import { basename, dirname } from '@zenfs/core/emulation/path.js';
-import { Errno, ErrnoError, errorMessages } from '@zenfs/core/error.js';
-import { File } from '@zenfs/core/file.js';
-import type { FileSystemMetadata } from '@zenfs/core/filesystem.js';
-import { FileSystem } from '@zenfs/core/filesystem.js';
-import { Stats } from '@zenfs/core/stats.js';
+import { Errno, File, FileSystem, ErrnoError, errorMessages, Sync, type Backend, type CreationOptions } from '@zenfs/core';
+import { basename, dirname } from '@zenfs/core/vfs/path.js';
+import { Stats, type StatsLike } from '@zenfs/core/stats.js';
 import type { Buffer } from 'buffer';
 
 /**
@@ -133,11 +129,11 @@ export class EmscriptenFile extends File<EmscriptenFS> {
 		}
 	}
 
-	public async utimes(atime: Date, mtime: Date): Promise<void> {
+	public async utimes(atime: number, mtime: number): Promise<void> {
 		return this.utimesSync(atime, mtime);
 	}
 
-	public utimesSync(atime: Date, mtime: Date): void {
+	public utimesSync(atime: number, mtime: number): void {
 		this.fs.utimesSync(this.path, atime, mtime);
 	}
 
@@ -160,15 +156,8 @@ export class EmscriptenFS extends Sync(FileSystem) {
 		 */
 		protected em: typeof FS
 	) {
-		super();
-	}
-
-	public metadata(): FileSystemMetadata {
-		const name = 'DB_NAME' in this.em && typeof this.em.DB_NAME == 'function' ? this.em.DB_NAME() : super.metadata().name;
-		return {
-			...super.metadata(),
-			name,
-		};
+		super(0x7761736d, 'wasmfs');
+		this.label = 'DB_NAME' in this.em && typeof this.em.DB_NAME == 'function' ? this.em.DB_NAME() : this.name;
 	}
 
 	public syncSync(path: string, data?: Uint8Array, stats: Readonly<Partial<Stats>> = {}): void {
@@ -308,9 +297,27 @@ export class EmscriptenFS extends Sync(FileSystem) {
 		}
 	}
 
-	public utimesSync(path: string, atime: Date, mtime: Date): void {
+	public utimesSync(path: string, atime: number, mtime: number): void {
 		try {
-			this.em.utime(path, atime.getTime(), mtime.getTime());
+			this.em.utime(path, atime, mtime);
+		} catch (e) {
+			throw convertError(e, path);
+		}
+	}
+
+	public readSync(path: string, buffer: Uint8Array, offset: number, end: number): void {
+		try {
+			const stream = this.em.open(path, 'r');
+			this.em.read(stream, buffer, offset, end - offset);
+		} catch (e) {
+			throw convertError(e, path);
+		}
+	}
+
+	public writeSync(path: string, buffer: Uint8Array, offset: number): void {
+		try {
+			const stream = this.em.open(path, 'r');
+			this.em.write(stream, buffer, offset, buffer.byteLength);
 		} catch (e) {
 			throw convertError(e, path);
 		}
