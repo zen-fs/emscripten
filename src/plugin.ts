@@ -1,4 +1,5 @@
-import zfs, { Errno, parseFlag, type Stats } from '@zenfs/core';
+import zfs, { Errno, type Stats } from '@zenfs/core';
+import { parse as parseFlag } from '@zenfs/core/vfs/flags.js';
 import type { EmFS } from './emscripten.js';
 
 interface Mount extends EmFS.Mount {

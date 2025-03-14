@@ -1,7 +1,7 @@
-import { Errno, File, FileSystem, ErrnoError, errorMessages, Sync, type Backend, type CreationOptions } from '@zenfs/core';
-import { basename, dirname } from '@zenfs/core/vfs/path.js';
-import { Stats, type StatsLike } from '@zenfs/core/stats.js';
-import type { Buffer } from 'buffer';
+import type { Backend, CreationOptions, InodeLike } from '@zenfs/core';
+import { Errno, ErrnoError, errorMessages, FileSystem, Inode, Sync } from '@zenfs/core';
+import { basename, dirname } from '@zenfs/core/path.js';
+import { S_IFDIR, S_IFREG } from '@zenfs/core/vfs/constants.js';
 
 /**
  * @hidden
@@ -21,131 +21,6 @@ function convertError(e: unknown, path: string = ''): ErrnoError {
 	return new ErrnoError(errno, errorMessages[errno], paths.length > 0 ? '/' + paths.join('/') : path);
 }
 
-export class EmscriptenFile extends File<EmscriptenFS> {
-	public constructor(
-		public fs: EmscriptenFS,
-		protected em: typeof FS,
-		public readonly path: string,
-		protected stream: FS.FSStream
-	) {
-		super(fs, path);
-	}
-
-	public get position(): number {
-		return this.stream.position;
-	}
-
-	public async close(): Promise<void> {
-		return this.closeSync();
-	}
-
-	public closeSync(): void {
-		try {
-			this.em.close(this.stream);
-		} catch (e) {
-			throw convertError(e, this.path);
-		}
-	}
-
-	public async stat(): Promise<Stats> {
-		return this.statSync();
-	}
-
-	public statSync(): Stats {
-		try {
-			return this.fs.statSync(this.path);
-		} catch (e) {
-			throw convertError(e, this.path);
-		}
-	}
-
-	public async truncate(len: number): Promise<void> {
-		return this.truncateSync(len);
-	}
-
-	public truncateSync(len: number): void {
-		try {
-			this.em.ftruncate(this.stream.fd!, len);
-		} catch (e) {
-			throw convertError(e, this.path);
-		}
-	}
-
-	public async write(buffer: Buffer, offset: number, length: number, position: number): Promise<number> {
-		return this.writeSync(buffer, offset, length, position);
-	}
-
-	public writeSync(buffer: Buffer, offset: number, length: number, position?: number): number {
-		try {
-			// Emscripten is particular about what position is set to.
-			return this.em.write(this.stream, buffer, offset, length, position);
-		} catch (e) {
-			throw convertError(e, this.path);
-		}
-	}
-
-	public async read<TBuffer extends ArrayBufferView>(buffer: TBuffer, offset: number, length: number, position: number): Promise<{ bytesRead: number; buffer: TBuffer }> {
-		return { bytesRead: this.readSync(buffer, offset, length, position), buffer };
-	}
-
-	public readSync(buffer: ArrayBufferView, offset: number, length: number, position?: number): number {
-		try {
-			// Emscripten is particular about what position is set to.
-			return this.em.read(this.stream, buffer, offset, length, position);
-		} catch (e) {
-			throw convertError(e, this.path);
-		}
-	}
-
-	public async sync(): Promise<void> {
-		this.syncSync();
-	}
-
-	public syncSync(): void {
-		// NOP.
-	}
-
-	public async chown(uid: number, gid: number): Promise<void> {
-		return this.chownSync(uid, gid);
-	}
-
-	public chownSync(uid: number, gid: number): void {
-		try {
-			this.em.fchown(this.stream.fd!, uid, gid);
-		} catch (e) {
-			throw convertError(e, this.path);
-		}
-	}
-
-	public async chmod(mode: number): Promise<void> {
-		return this.chmodSync(mode);
-	}
-
-	public chmodSync(mode: number): void {
-		try {
-			this.em.fchmod(this.stream.fd!, mode);
-		} catch (e) {
-			throw convertError(e, this.path);
-		}
-	}
-
-	public async utimes(atime: number, mtime: number): Promise<void> {
-		return this.utimesSync(atime, mtime);
-	}
-
-	public utimesSync(atime: number, mtime: number): void {
-		this.fs.utimesSync(this.path, atime, mtime);
-	}
-
-	public async _setType(): Promise<void> {
-		throw ErrnoError.With('ENOSYS', this.path, '_setType');
-	}
-
-	public _setTypeSync(): void {
-		throw ErrnoError.With('ENOSYS', this.path, '_setType');
-	}
-}
-
 /**
  * Mounts an Emscripten file system into the ZenFS file system.
  */
@@ -160,14 +35,18 @@ export class EmscriptenFS extends Sync(FileSystem) {
 		this.label = 'DB_NAME' in this.em && typeof this.em.DB_NAME == 'function' ? this.em.DB_NAME() : this.name;
 	}
 
-	public syncSync(path: string, data?: Uint8Array, stats: Readonly<Partial<Stats>> = {}): void {
+	public touchSync(path: string, inode: Partial<InodeLike>): void {
 		try {
-			if (data) this.em.writeFile(path, data);
-			if (stats.mode) this.em.chmod(path, stats.mode);
+			const existing = this.em.stat(path);
+			if (inode.mode) this.em.chmod(path, inode.mode);
+			if (inode.atimeMs) this.em.utime(path, inode.atimeMs, existing.mtime.getTime());
+			if (inode.mtimeMs) this.em.utime(path, existing.atime.getTime(), inode.mtimeMs);
 		} catch (e) {
 			throw convertError(e, path);
 		}
 	}
+
+	public syncSync(): void {}
 
 	public renameSync(oldPath: string, newPath: string): void {
 		try {
@@ -177,10 +56,10 @@ export class EmscriptenFS extends Sync(FileSystem) {
 		}
 	}
 
-	public statSync(path: string): Stats {
+	public statSync(path: string): Inode {
 		try {
 			const stats = this.em.stat(path);
-			return new Stats({
+			return new Inode({
 				mode: stats.mode,
 				size: stats.size,
 				atimeMs: stats.atime.getTime(),
@@ -192,21 +71,12 @@ export class EmscriptenFS extends Sync(FileSystem) {
 		}
 	}
 
-	public createFileSync(path: string): EmscriptenFile {
+	public createFileSync(path: string, options: CreationOptions): Inode {
 		try {
 			const node = this.em.createDataFile(dirname(path), basename(path), new Uint8Array(), true, true, true);
 			const stream = new this.em.FSStream();
 			stream.object = node;
-			return new EmscriptenFile(this, this.em, path, stream);
-		} catch (e) {
-			throw convertError(e, path);
-		}
-	}
-
-	public openFileSync(path: string, flag: string): EmscriptenFile {
-		try {
-			const stream = this.em.open(path, flag);
-			return new EmscriptenFile(this, this.em, path, stream);
+			return new Inode({ mode: options.mode | S_IFREG });
 		} catch (e) {
 			throw convertError(e, path);
 		}
@@ -228,9 +98,10 @@ export class EmscriptenFS extends Sync(FileSystem) {
 		}
 	}
 
-	public mkdirSync(path: string, mode: number): void {
+	public mkdirSync(path: string, options: CreationOptions): Inode {
 		try {
-			this.em.mkdir(path, mode);
+			this.em.mkdir(path, options.mode);
+			return new Inode({ mode: options.mode | S_IFDIR });
 		} catch (e) {
 			throw convertError(e, path);
 		}
