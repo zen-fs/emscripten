@@ -1,12 +1,13 @@
 import type { Backend, CreationOptions, InodeLike } from '@zenfs/core';
-import { Errno, ErrnoError, errorMessages, FileSystem, Inode, Sync } from '@zenfs/core';
+import { FileSystem, Inode, Sync } from '@zenfs/core';
 import { basename, dirname } from '@zenfs/core/path.js';
 import { S_IFDIR, S_IFREG } from '@zenfs/core/vfs/constants.js';
+import { Errno, Exception, strerror } from 'kerium';
 
 /**
  * @hidden
  */
-function convertError(e: unknown, path: string = ''): ErrnoError {
+function convertError(e: unknown, path: string = ''): Exception {
 	const error = e as FS.ErrnoError & { node?: FS.FSNode };
 	const errno = error.errno as Errno;
 	let parent = error.node;
@@ -18,7 +19,7 @@ function convertError(e: unknown, path: string = ''): ErrnoError {
 		}
 		parent = parent.parent;
 	}
-	return new ErrnoError(errno, errorMessages[errno], paths.length > 0 ? '/' + paths.join('/') : path);
+	return new Exception(errno, strerror(errno));
 }
 
 /**

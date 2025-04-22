@@ -1,5 +1,7 @@
-import zfs, { Errno, type Stats } from '@zenfs/core';
+import type { Stats } from '@zenfs/core';
+import { fs as zfs } from '@zenfs/core';
 import { parse as parseFlag } from '@zenfs/core/vfs/flags.js';
+import { Errno } from 'kerium';
 import type { EmFS } from './emscripten.js';
 
 interface Mount extends EmFS.Mount {
