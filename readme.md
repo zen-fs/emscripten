@@ -9,10 +9,12 @@
 
 For more information, see the [docs](https://zen-fs.github.io/emscripten).
 
-> [!IMPORTANT]
-> Please read the ZenFS core documentation!
+Please read the ZenFS core documentation!
 
 ## Installing
+
+> [!IMPORTANT]
+> This project is licensed under the LGPL (v3+).
 
 ```sh
 npm install @zenfs/emscripten

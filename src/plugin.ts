@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
 import type { Stats } from '@zenfs/core';
 import { fs as zfs } from '@zenfs/core';
 import { parse as parseFlag } from '@zenfs/core/vfs/flags.js';
