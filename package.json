@@ -1,6 +1,6 @@
 {
 	"name": "@zenfs/emscripten",
-	"version": "1.0.3",
+	"version": "1.0.4",
 	"description": "Emscripten backend for ZenFS",
 	"funding": {
 		"type": "individual",
