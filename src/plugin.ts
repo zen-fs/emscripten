@@ -40,7 +40,7 @@ function join2(a: string, b: string): string {
  * Adapted from Emscripten's NodeFS:
  * @see https://github.com/emscripten-core/emscripten/blob/main/src/library_nodefs.js
  */
-export default class ZenEmscriptenNodeFS implements EmscriptenNodeFS {
+export default class EmscriptenPlugin implements EmscriptenNodeFS {
 	public constructor(
 		public readonly fs: typeof zfs = zfs,
 		public readonly em_fs: typeof EmFS,
