@@ -4,6 +4,7 @@ import { fs as zfs } from '@zenfs/core';
 import { parse as parseFlag } from '@zenfs/core/vfs/flags.js';
 import { Errno } from 'kerium';
 import type { EmFS } from './emscripten.js';
+import { join, normalize } from '@zenfs/core/path';
 
 interface Mount extends EmFS.Mount {
 	opts: { root?: string };
@@ -25,6 +26,10 @@ interface EmscriptenNodeFS {
 	realPath(node: EmFS.FSNode): string;
 }
 
+function join2(a: string, b: string): string {
+	return normalize(a + '/' + b);
+}
+
 /**
  * Defines an Emscripten file system object for use in the Emscripten virtual filesystem.
  * Allows you to use synchronous file systems from within Emscripten.
@@ -38,10 +43,8 @@ export default class ZenEmscriptenNodeFS implements EmscriptenNodeFS {
 	public constructor(
 		public readonly fs: typeof zfs = zfs,
 		public readonly em_fs: typeof EmFS,
-		protected path: {
-			join(...parts: string[]): string;
-			join2(a: string, b: string): string;
-		}
+		/** @deprecated No longer used */
+		protected path?: unknown
 	) {}
 
 	public mount(mount: Mount): Node {
@@ -58,7 +61,7 @@ export default class ZenEmscriptenNodeFS implements EmscriptenNodeFS {
 		return node;
 	}
 
-	/* eslint-disable @typescript-eslint/no-explicit-any,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-argument */
+	/* eslint-disable @typescript-eslint/no-explicit-any */
 	public getMode(path: string): number {
 		let stat: Stats;
 		try {
@@ -80,7 +83,7 @@ export default class ZenEmscriptenNodeFS implements EmscriptenNodeFS {
 		}
 		parts.push(node.mount.opts.root!);
 		parts.reverse();
-		return this.path.join(...parts);
+		return join(...parts);
 	}
 
 	public node_ops: EmFS.NodeOps = {
@@ -133,7 +136,7 @@ export default class ZenEmscriptenNodeFS implements EmscriptenNodeFS {
 		},
 
 		lookup: (parent: EmFS.FSNode, name: string): EmFS.FSNode => {
-			const path = this.path.join2(this.realPath(parent), name);
+			const path = join2(this.realPath(parent), name);
 			const mode = this.getMode(path);
 			return this.createNode(parent, name, mode);
 		},
@@ -159,7 +162,7 @@ export default class ZenEmscriptenNodeFS implements EmscriptenNodeFS {
 
 		rename: (oldNode: EmFS.FSNode, newDir: EmFS.FSNode, newName: string): void => {
 			const oldPath = this.realPath(oldNode);
-			const newPath = this.path.join2(this.realPath(newDir), newName);
+			const newPath = join2(this.realPath(newDir), newName);
 			try {
 				this.fs.renameSync(oldPath, newPath);
 				// This logic is missing from the original NodeFS,
@@ -175,7 +178,7 @@ export default class ZenEmscriptenNodeFS implements EmscriptenNodeFS {
 		},
 
 		unlink: (parent: EmFS.FSNode, name: string): void => {
-			const path = this.path.join2(this.realPath(parent), name);
+			const path = join2(this.realPath(parent), name);
 			try {
 				this.fs.unlinkSync(path);
 			} catch (e: any) {
@@ -187,7 +190,7 @@ export default class ZenEmscriptenNodeFS implements EmscriptenNodeFS {
 		},
 
 		rmdir: (parent: EmFS.FSNode, name: string) => {
-			const path = this.path.join2(this.realPath(parent), name);
+			const path = join2(this.realPath(parent), name);
 			try {
 				this.fs.rmdirSync(path);
 			} catch (e: any) {
@@ -215,7 +218,7 @@ export default class ZenEmscriptenNodeFS implements EmscriptenNodeFS {
 		},
 
 		symlink: (parent: EmFS.FSNode, newName: string, oldPath: string): void => {
-			const newPath = this.path.join2(this.realPath(parent), newName);
+			const newPath = join2(this.realPath(parent), newName);
 			try {
 				this.fs.symlinkSync(oldPath, newPath);
 			} catch (e: any) {
@@ -301,6 +304,6 @@ export default class ZenEmscriptenNodeFS implements EmscriptenNodeFS {
 			stream.position = position;
 			return position;
 		},
-		/* eslint-enable @typescript-eslint/no-explicit-any,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-argument */
+		/* eslint-enable @typescript-eslint/no-explicit-any */
 	};
 }
