@@ -5,6 +5,7 @@ import { parse as parseFlag } from '@zenfs/core/vfs/flags.js';
 import { Errno } from 'kerium';
 import type { EmFS } from './emscripten.js';
 import { join, normalize } from '@zenfs/core/path';
+import { info } from 'kerium/log';
 
 interface Mount extends EmFS.Mount {
 	opts: { root?: string };
@@ -45,7 +46,9 @@ export default class ZenEmscriptenNodeFS implements EmscriptenNodeFS {
 		public readonly em_fs: typeof EmFS,
 		/** @deprecated No longer used */
 		protected path?: unknown
-	) {}
+	) {
+		info('emscripten: Created new plugin');
+	}
 
 	public mount(mount: Mount): Node {
 		return this.createNode(null, '/', this.getMode(mount.opts.root!), 0);
