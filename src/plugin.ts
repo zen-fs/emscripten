@@ -271,15 +271,14 @@ export default class ZenEmscriptenNodeFS implements EmscriptenNodeFS {
 			}
 		},
 		read: (stream: EmFS.FSStream, buffer: Uint8Array, offset: number, length: number, position: number): number => {
-			// Avoid copying overhead by reading directly into buffer.
 			try {
-				return this.fs.readSync(stream.nfd!, Buffer.from(buffer), offset, length, position);
+				// debugger;
+				return this.fs.readSync(stream.nfd!, buffer, offset, length, position);
 			} catch (e: any) {
 				throw new this.em_fs.ErrnoError(e.errno);
 			}
 		},
 		write: (stream: EmFS.FSStream, buffer: Uint8Array, offset: number, length: number, position: number): number => {
-			// Avoid copying overhead.
 			try {
 				return this.fs.writeSync(stream.nfd!, buffer, offset, length, position);
 			} catch (e: any) {
