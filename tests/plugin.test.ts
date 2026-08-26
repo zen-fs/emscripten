@@ -34,12 +34,34 @@ class FSNode {
 	}
 }
 
+const hashed: EmFS.FSNode[] = [];
+
+// FS.nameTable and friends, straight out of emscripten's src/lib/libfs.js, since
+// what the cache is worth can't be seen without the thing that reads it.
+type Cached = EmFS.FSNode & { name_next?: Cached; id: number };
+const nameTable: (Cached | undefined)[] = new Array(4096);
+
+function hashName(parentid: number, name: string): number {
+	let hash = 0;
+	for (let i = 0; i < name.length; i++) {
+		hash = ((hash << 5) - hash + name.charCodeAt(i)) | 0;
+	}
+	return ((parentid + hash) >>> 0) % nameTable.length;
+}
+
 const em_fs = {
 	ErrnoError,
 	FSNode,
 	isDir: (mode: number) => (mode & 0o170000) === 0o040000,
 	isFile: (mode: number) => (mode & 0o170000) === 0o100000,
 	isLink: (mode: number) => (mode & 0o170000) === 0o120000,
+	hashAddNode: (node: EmFS.FSNode) => {
+		hashed.push(node);
+		const cached = node as Cached;
+		const hash = hashName(cached.parent.id as unknown as number, cached.name);
+		cached.name_next = nameTable[hash];
+		nameTable[hash] = cached;
+	},
 } as unknown as typeof EmFS;
 
 mount('/zen', InMemory.create({ label: 'plugin-test' }));
@@ -100,5 +122,50 @@ suite('errnos crossing into Emscripten', () => {
 		const root = rooted();
 		const node = plugin.node_ops.lookup(root, 'present.txt');
 		assert.equal(plugin.node_ops.getattr(node).size, 5);
+	});
+});
+
+/** FS.lookupNode: the table first, node_ops.lookup only when it misses. */
+function lookupNode(parent: Cached, name: string): Cached {
+	for (let node = nameTable[hashName(parent.id, name)]; node; node = node.name_next) {
+		if ((node.parent as unknown as Cached).id === parent.id && node.name === name) return node;
+	}
+	return plugin.node_ops.lookup(parent, name) as Cached;
+}
+
+/** And FS.lookupPath, for a path with no symlinks or mounts in it. */
+function resolve(root: Cached, path: string): Cached {
+	let current = root;
+	for (const part of path.split('/')) current = lookupNode(current, part);
+	return current;
+}
+
+suite("Emscripten's lookup cache", () => {
+	test('a created node is hashed into it', () => {
+		const node = plugin.createNode(null, 'hashed.txt', 0o100644);
+		assert.ok(hashed.includes(node));
+	});
+
+	test('a resolved path is resolved once, not once per resolution', () => {
+		fs.mkdirSync('/zen/root/a/b/c/d', { recursive: true });
+		fs.writeFileSync('/zen/root/a/b/c/d/leaf.txt', 'x');
+
+		const root = rooted() as Cached;
+		(root as unknown as FSNode).mount = { opts: { root: '/zen/root' } };
+
+		let lookups = 0;
+		const real = plugin.node_ops.lookup;
+		plugin.node_ops.lookup = (parent: EmFS.FSNode, name: string) => {
+			lookups++;
+			return real.call(plugin.node_ops, parent, name);
+		};
+
+		try {
+			for (let i = 0; i < 100; i++) resolve(root, 'a/b/c/d/leaf.txt');
+		} finally {
+			plugin.node_ops.lookup = real;
+		}
+
+		assert.equal(lookups, 5, '5 components, resolved once each — not 500');
 	});
 });

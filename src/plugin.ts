@@ -62,6 +62,12 @@ export default class EmscriptenPlugin implements EmscriptenNodeFS {
 		const node: Node = new this.em_fs.FSNode(parent!, name, mode, rdev!);
 		node.node_ops = this.node_ops;
 		node.stream_ops = this.stream_ops;
+
+		// FS.createNode() adds the node to the lookup cache and this adaptation of NodeFS dropped
+		// it, so every path component was re-resolved on every lookup. hashAddNode is not in
+		// @types/emscripten, and is called optionally so a build without it behaves as before.
+		(this.em_fs as typeof EmFS & { hashAddNode?(node: EmFS.FSNode): void }).hashAddNode?.(node);
+
 		return node;
 	}
 
