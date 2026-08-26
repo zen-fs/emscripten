@@ -38,3 +38,6 @@ jobs:
 
             - name: Build
               run: npm run build
+
+            - name: Unit tests
+              run: npx zenfs-test -vn --common

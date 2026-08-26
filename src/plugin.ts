@@ -3,6 +3,7 @@ import type { Stats } from '@zenfs/core';
 import { fs as zfs } from '@zenfs/core';
 import { parse as parseFlag } from '@zenfs/core/vfs/flags.js';
 import { Errno } from 'kerium';
+import { toEmscriptenErrno } from './errno.js';
 import type { EmFS } from './emscripten.js';
 import { join, normalize } from '@zenfs/core/path';
 import { info } from 'kerium/log';
@@ -56,7 +57,7 @@ export default class EmscriptenPlugin implements EmscriptenNodeFS {
 
 	public createNode(parent: Node | null, name: string, mode: number, rdev?: number): Node {
 		if (!this.em_fs.isDir(mode) && !this.em_fs.isFile(mode) && !this.em_fs.isLink(mode)) {
-			throw new this.em_fs.ErrnoError(Errno.EINVAL);
+			throw new this.em_fs.ErrnoError(toEmscriptenErrno(Errno.EINVAL));
 		}
 		const node: Node = new this.em_fs.FSNode(parent!, name, mode, rdev!);
 		node.node_ops = this.node_ops;
@@ -73,7 +74,7 @@ export default class EmscriptenPlugin implements EmscriptenNodeFS {
 			if (!e.code) {
 				throw e;
 			}
-			throw new this.em_fs.ErrnoError(e.errno);
+			throw new this.em_fs.ErrnoError(toEmscriptenErrno(e.errno));
 		}
 		return stat.mode;
 	}
@@ -99,7 +100,7 @@ export default class EmscriptenPlugin implements EmscriptenNodeFS {
 				if (!e.code) {
 					throw e;
 				}
-				throw new this.em_fs.ErrnoError(e.errno);
+				throw new this.em_fs.ErrnoError(toEmscriptenErrno(e.errno));
 			}
 			return stat;
 		},
@@ -123,7 +124,7 @@ export default class EmscriptenPlugin implements EmscriptenNodeFS {
 				// Ignore not supported errors. Emscripten does utimesSync when it
 				// writes files, but never really requires the value to be set.
 				if (e.code !== 'ENOTSUP') {
-					throw new this.em_fs.ErrnoError(e.errno);
+					throw new this.em_fs.ErrnoError(toEmscriptenErrno(e.errno));
 				}
 			}
 			if (attr.size !== undefined) {
@@ -133,7 +134,7 @@ export default class EmscriptenPlugin implements EmscriptenNodeFS {
 					if (!e.code) {
 						throw e;
 					}
-					throw new this.em_fs.ErrnoError(e.errno);
+					throw new this.em_fs.ErrnoError(toEmscriptenErrno(e.errno));
 				}
 			}
 		},
@@ -158,7 +159,7 @@ export default class EmscriptenPlugin implements EmscriptenNodeFS {
 				if (!e.code) {
 					throw e;
 				}
-				throw new this.em_fs.ErrnoError(e.errno);
+				throw new this.em_fs.ErrnoError(toEmscriptenErrno(e.errno));
 			}
 			return node;
 		},
@@ -176,7 +177,7 @@ export default class EmscriptenPlugin implements EmscriptenNodeFS {
 				if (!e.code) {
 					throw e;
 				}
-				throw new this.em_fs.ErrnoError(e.errno);
+				throw new this.em_fs.ErrnoError(toEmscriptenErrno(e.errno));
 			}
 		},
 
@@ -188,7 +189,7 @@ export default class EmscriptenPlugin implements EmscriptenNodeFS {
 				if (!e.code) {
 					throw e;
 				}
-				throw new this.em_fs.ErrnoError(e.errno);
+				throw new this.em_fs.ErrnoError(toEmscriptenErrno(e.errno));
 			}
 		},
 
@@ -200,7 +201,7 @@ export default class EmscriptenPlugin implements EmscriptenNodeFS {
 				if (!e.code) {
 					throw e;
 				}
-				throw new this.em_fs.ErrnoError(e.errno);
+				throw new this.em_fs.ErrnoError(toEmscriptenErrno(e.errno));
 			}
 		},
 
@@ -216,7 +217,7 @@ export default class EmscriptenPlugin implements EmscriptenNodeFS {
 				if (!e.code) {
 					throw e;
 				}
-				throw new this.em_fs.ErrnoError(e.errno);
+				throw new this.em_fs.ErrnoError(toEmscriptenErrno(e.errno));
 			}
 		},
 
@@ -228,7 +229,7 @@ export default class EmscriptenPlugin implements EmscriptenNodeFS {
 				if (!e.code) {
 					throw e;
 				}
-				throw new this.em_fs.ErrnoError(e.errno);
+				throw new this.em_fs.ErrnoError(toEmscriptenErrno(e.errno));
 			}
 		},
 
@@ -240,7 +241,7 @@ export default class EmscriptenPlugin implements EmscriptenNodeFS {
 				if (!e.code) {
 					throw e;
 				}
-				throw new this.em_fs.ErrnoError(e.errno);
+				throw new this.em_fs.ErrnoError(toEmscriptenErrno(e.errno));
 			}
 		},
 	};
@@ -255,7 +256,7 @@ export default class EmscriptenPlugin implements EmscriptenNodeFS {
 				if (!e.code) {
 					throw e;
 				}
-				throw new this.em_fs.ErrnoError(e.errno);
+				throw new this.em_fs.ErrnoError(toEmscriptenErrno(e.errno));
 			}
 		},
 		close: (stream: EmFS.FSStream): void => {
@@ -267,7 +268,7 @@ export default class EmscriptenPlugin implements EmscriptenNodeFS {
 				if (!e.code) {
 					throw e;
 				}
-				throw new this.em_fs.ErrnoError(e.errno);
+				throw new this.em_fs.ErrnoError(toEmscriptenErrno(e.errno));
 			}
 		},
 		read: (stream: EmFS.FSStream, buffer: Uint8Array, offset: number, length: number, position: number): number => {
@@ -275,14 +276,14 @@ export default class EmscriptenPlugin implements EmscriptenNodeFS {
 				// debugger;
 				return this.fs.readSync(stream.nfd!, buffer, offset, length, position);
 			} catch (e: any) {
-				throw new this.em_fs.ErrnoError(e.errno);
+				throw new this.em_fs.ErrnoError(toEmscriptenErrno(e.errno));
 			}
 		},
 		write: (stream: EmFS.FSStream, buffer: Uint8Array, offset: number, length: number, position: number): number => {
 			try {
 				return this.fs.writeSync(stream.nfd!, buffer, offset, length, position);
 			} catch (e: any) {
-				throw new this.em_fs.ErrnoError(e.errno);
+				throw new this.em_fs.ErrnoError(toEmscriptenErrno(e.errno));
 			}
 		},
 		llseek: (stream: EmFS.FSStream, offset: number, whence: number): number => {
@@ -295,12 +296,12 @@ export default class EmscriptenPlugin implements EmscriptenNodeFS {
 				try {
 					position += this.fs.fstatSync(stream.nfd!).size;
 				} catch (e: any) {
-					throw new this.em_fs.ErrnoError(e.errno);
+					throw new this.em_fs.ErrnoError(toEmscriptenErrno(e.errno));
 				}
 			}
 
 			if (position < 0) {
-				throw new this.em_fs.ErrnoError(Errno.EINVAL);
+				throw new this.em_fs.ErrnoError(toEmscriptenErrno(Errno.EINVAL));
 			}
 
 			stream.position = position;
