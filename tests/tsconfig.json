@@ -1,0 +1,13 @@
+{
+	"extends": "../tsconfig.json",
+	"type": "module",
+	"compilerOptions": {
+		"target": "ES2022",
+		"noEmit": true,
+		"rootDir": "..",
+		"lib": ["ESNext", "DOM"],
+		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true
+	},
+	"include": ["**/*.ts", "*.ts"]
+}
