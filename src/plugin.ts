@@ -59,9 +59,10 @@ export default class EmscriptenPlugin implements EmscriptenNodeFS {
 		if (!this.em_fs.isDir(mode) && !this.em_fs.isFile(mode) && !this.em_fs.isLink(mode)) {
 			throw new this.em_fs.ErrnoError(toEmscriptenErrno(Errno.EINVAL));
 		}
-		const node: Node = new this.em_fs.FSNode(parent!, name, mode, rdev!);
+		const node: Node = new this.em_fs.FSNode(parent, name, mode, rdev);
 		node.node_ops = this.node_ops;
 		node.stream_ops = this.stream_ops;
+		this.em_fs.hashAddNode(node);
 		return node;
 	}
 
