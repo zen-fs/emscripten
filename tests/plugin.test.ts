@@ -38,8 +38,7 @@ const hashed: EmFS.FSNode[] = [];
 
 // FS.nameTable and friends, straight out of emscripten's src/lib/libfs.js, since
 // what the cache is worth can't be seen without the thing that reads it.
-type Cached = EmFS.FSNode & { name_next?: Cached; id: number };
-const nameTable: (Cached | undefined)[] = new Array(4096);
+const nameTable: (EmFS.FSNode | undefined)[] = new Array(4096);
 
 function hashName(parentid: number, name: string): number {
 	let hash = 0;
@@ -57,10 +56,9 @@ const em_fs = {
 	isLink: (mode: number) => (mode & 0o170000) === 0o120000,
 	hashAddNode: (node: EmFS.FSNode) => {
 		hashed.push(node);
-		const cached = node as Cached;
-		const hash = hashName(cached.parent.id as unknown as number, cached.name);
-		cached.name_next = nameTable[hash];
-		nameTable[hash] = cached;
+		const hash = hashName(node.parent.id, node.name);
+		node.name_next = nameTable[hash];
+		nameTable[hash] = node;
 	},
 } as unknown as typeof EmFS;
 
@@ -126,15 +124,15 @@ suite('errnos crossing into Emscripten', () => {
 });
 
 /** FS.lookupNode: the table first, node_ops.lookup only when it misses. */
-function lookupNode(parent: Cached, name: string): Cached {
+function lookupNode(parent: EmFS.FSNode, name: string): EmFS.FSNode {
 	for (let node = nameTable[hashName(parent.id, name)]; node; node = node.name_next) {
-		if ((node.parent as unknown as Cached).id === parent.id && node.name === name) return node;
+		if (node.parent.id === parent.id && node.name === name) return node;
 	}
-	return plugin.node_ops.lookup(parent, name) as Cached;
+	return plugin.node_ops.lookup(parent, name);
 }
 
 /** And FS.lookupPath, for a path with no symlinks or mounts in it. */
-function resolve(root: Cached, path: string): Cached {
+function resolve(root: EmFS.FSNode, path: string): EmFS.FSNode {
 	let current = root;
 	for (const part of path.split('/')) current = lookupNode(current, part);
 	return current;
@@ -150,14 +148,14 @@ suite("Emscripten's lookup cache", () => {
 		fs.mkdirSync('/zen/root/a/b/c/d', { recursive: true });
 		fs.writeFileSync('/zen/root/a/b/c/d/leaf.txt', 'x');
 
-		const root = rooted() as Cached;
+		const root = rooted();
 		(root as unknown as FSNode).mount = { opts: { root: '/zen/root' } };
 
 		let lookups = 0;
-		const real = plugin.node_ops.lookup;
+		const real = plugin.node_ops.lookup.bind(plugin.node_ops);
 		plugin.node_ops.lookup = (parent: EmFS.FSNode, name: string) => {
 			lookups++;
-			return real.call(plugin.node_ops, parent, name);
+			return real(parent, name);
 		};
 
 		try {
