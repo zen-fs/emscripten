@@ -141,12 +141,12 @@ function resolve(root: Cached, path: string): Cached {
 }
 
 suite("Emscripten's lookup cache", () => {
-	test('a created node is hashed into it', () => {
+	test('a created node is hashed into it #7', () => {
 		const node = plugin.createNode(null, 'hashed.txt', 0o100644);
 		assert.ok(hashed.includes(node));
 	});
 
-	test('a resolved path is resolved once, not once per resolution', () => {
+	test('a resolved path is resolved once, not once per resolution #7', () => {
 		fs.mkdirSync('/zen/root/a/b/c/d', { recursive: true });
 		fs.writeFileSync('/zen/root/a/b/c/d/leaf.txt', 'x');
 
