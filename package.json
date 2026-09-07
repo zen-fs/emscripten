@@ -45,7 +45,6 @@
 		"lint": "eslint src tests",
 		"test": "npx zenfs-test -bcn",
 		"build": "tsc -p tsconfig.json",
-		"build:docs": "typedoc --out docs --name 'ZenFS Emscripten' src/index.ts",
 		"prepublishOnly": "npm run build"
 	},
 	"devDependencies": {
