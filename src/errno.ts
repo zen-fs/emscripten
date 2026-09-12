@@ -28,6 +28,7 @@ const linuxToEmscripten: Record<number, number> = {
 	[Errno.EISDIR]: 31,
 	[Errno.EINVAL]: 28,
 	[Errno.ENFILE]: 41,
+	[Errno.ENOTTY]: 59,
 	[Errno.EMFILE]: 33,
 	[Errno.ETXTBSY]: 74,
 	[Errno.EFBIG]: 22,
