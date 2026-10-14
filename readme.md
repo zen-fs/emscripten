@@ -31,3 +31,8 @@ if (!fs.existsSync('/test.txt')) {
 const contents = fs.readFileSync('/test.txt', 'utf-8');
 console.log(contents);
 ```
+
+## License
+
+[@zenfs/emscripten](https://github.com/zen-fs/emscripten) is licensed under the [LGPL 3.0 or later](https://www.gnu.org/licenses/lgpl-3.0.html) and [COPYING.md](https://github.com/zen-fs/emscripten/blob/main/COPYING.md).
+Copyright © James Prevett and other ZenFS contributors.
