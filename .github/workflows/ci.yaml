@@ -40,4 +40,4 @@ jobs:
               run: npm run build
 
             - name: Unit tests
-              run: npx zenfs-test -vn --common
+              run: npx zenfs-test -v --common
