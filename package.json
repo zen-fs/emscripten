@@ -50,7 +50,7 @@
 	},
 	"devDependencies": {
 		"@types/emscripten": "^1.41.6",
-		"@zenfs/devel": "^0.1.0",
+		"@zenfs/devel": "^1.0.0",
 		"eslint": "^10.1.0",
 		"prettier": "^3.2.5",
 		"typedoc": "^0.28.18",
