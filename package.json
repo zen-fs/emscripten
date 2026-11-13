@@ -25,8 +25,7 @@
 		"url": "https://github.com/zen-fs/emscripten/issues"
 	},
 	"files": [
-		"dist",
-		"license.md"
+		"dist"
 	],
 	"engines": {
 		"node": ">= 18"
